@@ -1,0 +1,16 @@
+const { test, expect } = require('@playwright/test');
+const { loginAsAdmin } = require('../../shared/auth');
+
+test('Inspect Level select options', async ({ page }) => {
+  await loginAsAdmin(page);
+  await page.goto('/admin/classrooms/new');
+  await page.waitForFunction(() => !document.body.innerText.includes('Loading'), { timeout: 60000 });
+
+  const selects = await page.locator('select').all();
+  console.log(`Found ${selects.length} select elements`);
+
+  for (let i = 0; i < selects.length; i++) {
+    const options = await selects[i].locator('option').allTextContents();
+    console.log(`Select #${i}: ${JSON.stringify(options)}`);
+  }
+});

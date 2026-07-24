@@ -1,0 +1,4510 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+e2e/example.spec.ts
+e2e/pages/ClassroomPage.js
+e2e/pages/OnboardingPage.js
+e2e/template.spec.ts
+e2e/tests/billing/charge.spec.ts
+e2e/tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js
+e2e/tests/classrooms/CP-INSPECT-LEVELS.spec.js
+e2e/tests/families/issue-524.spec.ts
+e2e/tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js
+e2e/tests/permissions/login-by-role.spec.ts
+e2e/utils/api.ts
+e2e/utils/auth.ts
+e2e/utils/generators.js
+e2e/utils/helpers.ts
+evidence/screenshots/cp-onb-01-complete.png
+evidence/screenshots/cp-onb-02-minimal.png
+package.json
+playwright.config.ts
+test-results.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".gitignore">
+# Playwright
+.env
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/e2e/screenshots/
+</file>
+
+<file path="e2e/example.spec.ts">
+import { test, expect, BrowserContext, Page } from '@playwright/test';
+import { clickTableAction, createCharge, debugLog, expectToast, findTableRow, getFieldValueByLabel, getFormFieldByLabel, getModal } from './utils/helpers';
+import { apiDelete, apiGet, apiPatch, waitForResponse } from './utils/api';
+import { loginViaUI } from './utils/auth';
+
+test.describe('Example', () => {
+  let sharedContext: BrowserContext;
+  let sharedPage: Page;
+
+  // 0. Login - Una sola vez antes de todas las pruebas
+  test.beforeAll(async ({ browser }) => {
+    sharedContext = await browser.newContext();
+    sharedPage = await sharedContext.newPage();
+    await loginViaUI(sharedPage);
+  });
+
+  // Cerrar el contexto después de todas las pruebas
+  test.afterAll(async () => {
+    await sharedContext.close();
+  });
+
+  async function getAddressFields(page: Page) {
+    const address = getFormFieldByLabel(page, 'Address');
+    const city = getFormFieldByLabel(page, 'City');
+    const state = getFormFieldByLabel(page, 'State');
+    const postal = getFormFieldByLabel(page, 'Postal Code');
+    const country = getFormFieldByLabel(page, 'Country');
+
+    expect(address, 'El campo "Street address" debe existir').not.toBeNull();
+    expect(city, 'El campo "City" debe existir').not.toBeNull();
+    expect(state, 'El campo "State" debe existir').not.toBeNull();
+    expect(postal, 'El campo "Postal Code" debe existir').not.toBeNull();
+    expect(country, 'El campo "Country" debe existir').not.toBeNull();
+
+    return { address: address!, city: city!, state: state!, postal: postal!, country: country! };
+  }
+
+  /**
+   * Rellena los campos del formulario con los datos proporcionados (objeto parcial).
+   * Ejemplo: fillAddressFields(page, { address: 'Calle 123', city: 'Madrid' });
+   */
+  async function fillAddressFields(
+    page: Page,
+    data: Partial<{
+      address: string;
+      city: string;
+      state: string;
+      postal: string;
+      country: string;
+    }>
+  ) {
+    const fields = await getAddressFields(page);
+    if (data.address !== undefined) await fields.address.fill(data.address);
+    if (data.city !== undefined) await fields.city.fill(data.city);
+    if (data.state !== undefined) await fields.state.fill(data.state);
+    if (data.postal !== undefined) await fields.postal.fill(data.postal);
+    if (data.country !== undefined) await fields.country.selectOption(data.country);
+  }
+
+  /**
+   * Limpia todos los campos del formulario (rellena con cadena vacía).
+   */
+  async function clearAddressFields(page: Page) {
+    await fillAddressFields(page, {
+      address: '',
+      city: '',
+      state: '',
+      postal: '',
+    });
+  }
+
+  async function openFirstMemberEditModal(page: Page): Promise<void> {
+    // Localizar el primer botón de editar (icono de lápiz) dentro de la sección de miembros
+    await page.getByRole('button').filter({ hasText: /^$/ }).nth(1).click();
+
+    // Esperar que el modal esté visible
+    const modal = getModal(page);
+    await expect(modal).toBeVisible();
+  }
+
+  async function fillMemberAddressFields(
+    page: Page,
+    data: Partial<{
+      address: string;
+      city: string;
+      state: string;
+      postal: string;
+      country: string;
+    }>
+  ) {
+    const fields = await getMemberAddressFields(page);
+    if (data.address !== undefined) await fields.address.fill(data.address);
+    if (data.city !== undefined) await fields.city.fill(data.city);
+    if (data.state !== undefined) await fields.state.fill(data.state);
+    if (data.postal !== undefined) await fields.postal.fill(data.postal);
+    if (data.country !== undefined) await fields.country.selectOption(data.country);
+  }
+
+  /**
+   * Obtiene todos los campos del formulario de dirección dentro del modal de
+   * edición de un miembro. Asume que los labels son los mismos que en familia.
+   */
+  async function getMemberAddressFields(page: Page, continerHas='') {
+    const address = getFormFieldByLabel(page, 'Address', true);
+    const city = getFormFieldByLabel(page, 'City', true);
+    const state = getFormFieldByLabel(page, 'State', true);
+    const postal = getFormFieldByLabel(page, 'Postal Code', true);
+    const country = getFormFieldByLabel(page, 'Country', true);
+
+    expect(address, 'El campo "Address" debe existir en el modal del miembro').not.toBeNull();
+    expect(city, 'El campo "City" debe existir en el modal del miembro').not.toBeNull();
+    expect(state, 'El campo "State" debe existir en el modal del miembro').not.toBeNull();
+    expect(postal, 'El campo "Postal Code" debe existir en el modal del miembro').not.toBeNull();
+    expect(country, 'El campo "Country" debe existir en el modal del miembro').not.toBeNull();
+
+    return { address: address!, city: city!, state: state!, postal: postal!, country: country! };
+  }
+
+
+  test('CP-FAM-10 - Editar dirección de miembro correctamente y persistir tras recarga', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    await fillMemberAddressFields(sharedPage, {
+      address: '742 Evergreen Terrace',
+      city: 'Springfield',
+      state: 'Oregon',
+      postal: '97401',
+      country: 'United States',
+    });
+
+    // const patchPromise = waitForResponse(sharedPage, '/rest/v1/family_members', 'PATCH');
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/families', 'POST'); // Este es el que se ejecuta
+    await sharedPage.getByRole('button', { name: /Save|Update/ }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe responder con éxito (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    console.log(payload)
+    expect(payload.address, 'El campo "address" debe coincidir con lo enviado').toBe('742 Evergreen Terrace');
+    expect(payload.city, 'El campo "city" debe coincidir con lo enviado').toBe('Springfield');
+    expect(payload.state, 'El campo "state" debe coincidir con lo enviado').toBe('Oregon');
+    expect(payload.postal_code, 'El campo "postal_code" debe coincidir con lo enviado').toBe('97401');
+    expect(payload.country, 'El campo "country" debe coincidir con lo enviado').toBe('United States');
+
+    // Verificar que la dirección se muestra en la vista de detalle (asumiendo que se muestra)
+    await expect(sharedPage.getByText('742 Evergreen Terrace'), 'La dirección debe mostrarse en la vista de detalle').toBeVisible();
+    await expect(sharedPage.getByText('Springfield, Oregon 97401'), 'La ciudad, estado y código postal deben mostrarse formateados').toBeVisible();
+
+    await sharedPage.reload();
+    await expect(sharedPage.getByText('742 Evergreen Terrace'), 'Tras recargar, la dirección debe seguir visible').toBeVisible();
+    await expect(sharedPage.getByText('Springfield, Oregon 97401'), 'Tras recargar, la ciudad/estado/CP deben seguir visibles').toBeVisible();
+  });
+});
+</file>
+
+<file path="e2e/pages/ClassroomPage.js">
+const { getFormFieldByLabel } = require('../utils/helpers');
+
+class ClassroomPage {
+  constructor(page) {
+    this.page = page;
+
+    // --- Campos con label (usamos getFormFieldByLabel) ---
+    // No los guardamos como propiedades fijas porque el helper los busca dinámicamente.
+    // En su lugar, definimos métodos internos para obtenerlos.
+  }
+
+  // -------------------------------------------------------------------------
+  // Métodos privados para obtener campos por label
+  // -------------------------------------------------------------------------
+
+  _getField(label) {
+    return getFormFieldByLabel(this.page, label);
+  }
+
+  async _getSelectOptions(field) {
+    if (!field) return [];
+    return await field.locator('option').allInnerTexts().catch(() => []);
+  }
+
+  // -------------------------------------------------------------------------
+  // Navegación
+  // -------------------------------------------------------------------------
+
+  async gotoNew() {
+    await this.page.goto('/admin/classrooms/new', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+    await this.page.waitForTimeout(2000);
+    if (this.page.url().includes('/admin/classrooms/new')) {
+      for (let i = 0; i < 45; i++) {
+        const text = await this.page.evaluate(() => document.body.innerText);
+        if (!text.includes('Loading')) return;
+        await this.page.waitForTimeout(2000);
+      }
+      return;
+    }
+    console.log('  → WARN: Direct /new failed, navigating via list');
+    await this.page.goto('/admin/classrooms', { waitUntil: 'domcontentloaded', timeout: 120000 }).catch(() => {});
+    await this.page.waitForTimeout(3000);
+    const addBtn = this.page.locator('a[href="/admin/classrooms/new"]');
+    await addBtn.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
+    await addBtn.click().catch(() => {});
+    await this.page.waitForURL('**/admin/classrooms/new', { timeout: 60000 }).catch(() => {});
+    for (let i = 0; i < 45; i++) {
+      const text = await this.page.evaluate(() => document.body.innerText);
+      if (!text.includes('Loading')) break;
+      await this.page.waitForTimeout(2000);
+    }
+  }
+
+  async gotoList() {
+    await this.page.goto('/admin/classrooms');
+    for (let i = 0; i < 45; i++) {
+      const text = await this.page.evaluate(() => document.body.innerText);
+      if (!text.includes('Loading')) break;
+      await this.page.waitForTimeout(2000);
+    }
+    await this.page.waitForTimeout(2000);
+  }
+
+  async gotoEdit(classroomId) {
+    await this.page.goto(`/admin/classrooms/${classroomId}`);
+    await this.page.waitForFunction(() => !document.body.innerText.includes('Loading'), { timeout: 60000 }).catch(() => {});
+    await this.page.waitForSelector('h1:has-text("Classroom")', { timeout: 30000 });
+    await this.page.getByRole('link', { name: /edit classroom/i }).click();
+    await this.page.waitForURL(`**/admin/classrooms/${classroomId}/edit`, { timeout: 15000 }).catch(() => {});
+    await this.page.waitForFunction((id) => {
+      return document.body.innerText.includes('Classroom Name') || 
+             document.location.href.includes('/edit');
+    }, classroomId, { timeout: 30000 });
+    await this.page.waitForTimeout(1500);
+  }
+
+  // -------------------------------------------------------------------------
+  // Fill Basic Info
+  // -------------------------------------------------------------------------
+
+  async fillBasicInfo({ name, code, campus, level, size, status }) {
+    // Classroom Name *
+    const nameField = this._getField('Classroom Name *');
+    if (nameField && name !== undefined) {
+      await nameField.fill(name);
+    }
+
+    // Classroom Code *
+    const codeField = this._getField('Classroom Code *');
+    if (codeField && code !== undefined) {
+      await codeField.fill(code);
+    }
+
+    // Campus
+    const campusField = this._getField('Campus');
+    if (campusField && campus !== undefined) {
+      await campusField.selectOption(campus);
+    }
+
+    // Level
+    const levelField = this._getField('Level');
+    if (levelField && level !== undefined) {
+      await levelField.selectOption(level);
+    }
+
+    // Classroom Size (sq ft)
+    const sizeField = this._getField('Classroom Size (sq ft)');
+    if (sizeField && size !== undefined) {
+      await sizeField.fill(String(size));
+    }
+
+    // Status
+    const statusField = this._getField('Status');
+    if (statusField && status !== undefined) {
+      await statusField.selectOption(status);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Fill Physical Location
+  // -------------------------------------------------------------------------
+
+  async fillPhysicalLocation({ building, floor, roomNumber }) {
+    const buildingField = this._getField('Building');
+    if (buildingField && building !== undefined) {
+      await buildingField.fill(building);
+    }
+
+    const floorField = this._getField('Floor');
+    if (floorField && floor !== undefined) {
+      await floorField.fill(String(floor));
+    }
+
+    const roomField = this._getField('Room Number');
+    if (roomField && roomNumber !== undefined) {
+      await roomField.fill(roomNumber);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Operating Hours (se mantienen con selectores relativos porque no hay labels únicos)
+  // -------------------------------------------------------------------------
+
+  async setOperatingHours(dayIndex, { enabled, start, end }) {
+    // Los checkboxes de días están dentro de una sección, usamos selectores relativos
+    const dayCheckboxes = this.page.locator('input[type="checkbox"]').filter({ has: this.page.locator('..').locator('label') });
+    // Pero mejor: localizar por el texto del día (Monday, Tuesday, etc.)
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayLabel = days[dayIndex];
+    if (!dayLabel) return;
+
+    // Encontrar el checkbox asociado al día
+    const checkbox = this.page.locator(`label:has-text("${dayLabel}")`).locator('..').locator('input[type="checkbox"]').first();
+    if (enabled !== undefined) {
+      const isChecked = await checkbox.isChecked().catch(() => false);
+      if (enabled !== isChecked) {
+        await checkbox.click();
+      }
+    }
+
+    // Los inputs de tiempo: buscamos dentro del mismo contenedor del día
+    const container = this.page.locator(`label:has-text("${dayLabel}")`).locator('..');
+    const timeInputs = container.locator('input[type="time"]');
+    if (start) {
+      const startInput = timeInputs.nth(0);
+      if (await startInput.isVisible().catch(() => false)) {
+        await startInput.fill(start);
+      }
+    }
+    if (end) {
+      const endInput = timeInputs.nth(1);
+      if (await endInput.isVisible().catch(() => false)) {
+        await endInput.fill(end);
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Staff Ratio (select con label)
+  // -------------------------------------------------------------------------
+
+  async selectStaffRatio(ratioValue) {
+    const ratioField = this._getField('Staff Ratio');
+    if (ratioField) {
+      await ratioField.selectOption(ratioValue);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Amenities (checkboxes con label)
+  // -------------------------------------------------------------------------
+
+  async toggleAmenity(name, checked) {
+    const cb = this._getField(name);
+    if (cb && await cb.isVisible().catch(() => false)) {
+      const isChecked = await cb.isChecked().catch(() => false);
+      if (checked !== isChecked) {
+        await cb.click();
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Notes
+  // -------------------------------------------------------------------------
+
+  async fillNotes(notes) {
+    // El campo de notas tiene label "Notes" o "Additional Notes"
+    const notesField = this._getField('Notes');
+    if (notesField && notes !== undefined) {
+      await notesField.fill(notes);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Botones
+  // -------------------------------------------------------------------------
+
+  async clickCreate() {
+    const createBtn = this.page.getByRole('button', { name: /Create Classroom/i });
+    await createBtn.scrollIntoViewIfNeeded();
+    await this.page.waitForTimeout(500);
+    await createBtn.click();
+    await this.page.waitForTimeout(3000);
+  }
+
+  async clickUpdate() {
+    const updateBtn = this.page.getByRole('button', { name: /Save Changes/i });
+    await updateBtn.click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  // -------------------------------------------------------------------------
+  // Helper para seleccionar el primer campus disponible (útil para pruebas)
+  // -------------------------------------------------------------------------
+
+  async selectFirstAvailableCampus() {
+    const campusField = this._getField('Campus');
+    if (!campusField) return;
+    await this.page.waitForTimeout(2000);
+    const hasOptions = await campusField.evaluate(sel => {
+      return Array.from(sel.options).some(o => o.value && o.value !== '');
+    }).catch(() => false);
+    if (hasOptions) {
+      const value = await campusField.evaluate(sel => {
+        const opt = Array.from(sel.options).find(o => o.value && o.value !== '');
+        return opt ? opt.value : null;
+      });
+      if (value) await campusField.selectOption(value);
+    } else {
+      console.log('  → WARN: No campuses available, proceeding without campus selection');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Expect success / validation
+  // -------------------------------------------------------------------------
+
+  async expectSuccessMessage(createdName) {
+    if (createdName) {
+      const id = await this.verifyCreationByAPI(createdName);
+      if (id) return id;
+    }
+    await expect(async () => {
+      const url = this.page.url();
+      const onList = url.includes('/admin/classrooms') && !url.includes('/new');
+      if (onList) {
+        const errorToast = await this.page.locator('.error-toast, .alert-error, [data-sonner-toast][data-type="error"]').first().isVisible({ timeout: 1000 }).catch(() => false);
+        expect(errorToast).toBeFalsy();
+        return;
+      }
+      const successToast = await this.page.locator('[data-sonner-toast][data-type="success"], [data-sonner-toast]:has-text("success"), [data-sonner-toast]:has-text("created")').first().isVisible({ timeout: 2000 }).catch(() => false);
+      expect(successToast).toBeTruthy();
+    }).toPass({ timeout: 30000 });
+    return null;
+  }
+
+  async expectValidationError() {
+    await expect(this.page).toHaveURL(/\/new$/, { timeout: 5000 });
+  }
+
+  // -------------------------------------------------------------------------
+  // API Helpers (se mantienen igual)
+  // -------------------------------------------------------------------------
+
+  async getAuthToken() {
+    const cookies = await this.page.context().cookies();
+    const authCookie = cookies.find(c => c.name === 'sb-api-auth-token');
+    if (!authCookie) {
+      console.log('  → WARN: sb-api-auth-token cookie not found');
+      return null;
+    }
+    try {
+      const payload = JSON.parse(Buffer.from(authCookie.value.replace('base64-',''), 'base64').toString());
+      return payload.access_token;
+    } catch (e) {
+      console.log('  → Error decoding auth cookie:', e.message);
+      return null;
+    }
+  }
+
+  async verifyCreationByAPI(name) {
+    const token = await this.getAuthToken();
+    if (!token) return null;
+    try {
+      const encoded = encodeURIComponent(name).replace(/%20/g, '+');
+      const res = await fetch('https://api.presupbase.juvomos.com/rest/v1/classrooms?select=id,classroom_name&classroom_name=eq.' + encoded, {
+        headers: { 'Authorization': 'Bearer ' + token, 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc5NDc4MzE5LCJleHAiOjE5MzcxNTgzMTl9.VbuKKxQWSNJ0GFSU8VE-RQFJhx1wR-kD8NPgpi83VbI' }
+      });
+      const data = await res.json();
+      if (data && data.length > 0) return data[0].id;
+      console.log(`  → API: no classroom found with name="${name}"`);
+    } catch (e) { console.log('  → API verification error:', e.message); }
+    return null;
+  }
+
+  async getClassroomIdFromList(name) {
+    const apiId = await this.verifyCreationByAPI(name);
+    if (apiId) return apiId;
+    await this.page.goto('/admin/classrooms');
+    await this.page.waitForFunction(() => !document.body.innerText.includes('Loading'), { timeout: 120000 }).catch(() => {});
+    await this.page.waitForTimeout(3000);
+    const searchBox = this.page.locator('input[placeholder*="Search"]');
+    if (await searchBox.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await searchBox.fill(name);
+      await this.page.waitForTimeout(3000);
+    }
+    const id = await this.page.evaluate((searchName) => {
+      const links = document.querySelectorAll('a[href*="/edit"], a[href*="/classrooms/"]');
+      for (const link of links) {
+        const match = link.href.match(/\/admin\/classrooms\/([^/]+)/);
+        if (match && match[1] && match[1].length > 20) {
+          const row = link.closest('tr') || link.parentElement || link;
+          if (row && row.textContent.includes(searchName)) {
+            return match[1];
+          }
+        }
+      }
+      return null;
+    }, name);
+    if (!id) throw new Error(`Classroom named "${name}" not found in list`);
+    return id;
+  }
+}
+
+module.exports = { ClassroomPage };
+</file>
+
+<file path="e2e/pages/OnboardingPage.js">
+const { getFormFieldByLabel } = require('../utils/helpers');
+
+/**
+ * OnboardingPage — Page object for the 4-step child enrollment wizard.
+ *
+ * Step flow:
+ *   1. Child Information  → "Next: Parent/Guardian"
+ *   2. Parent/Guardian   → "Next: Medical Info"   (needs a guardian added + relationship)
+ *   3. Medical           → "Next: Enrollment"
+ *   4. Enrollment        → "Complete Enrollment"   (needs classroom + enrollment type)
+ */
+class OnboardingPage {
+  constructor(page) {
+    this.page = page;
+  }
+
+  // -------------------------------------------------------------------------
+  // Navegación y espera de carga
+  // -------------------------------------------------------------------------
+  async goto() {
+    // Limpiar datos de sesión previos
+    await this.page.evaluate(() => {
+      try { sessionStorage.removeItem('child_enrollment_form_data'); } catch { }
+    }).catch(() => { });
+
+    const url = this.page.url();
+    const base = url.replace(/\/admin.*$/, '');
+    const target = `${base}/admin/children/new`;
+
+    await this.page.goto(target, { timeout: 60000, waitUntil: 'domcontentloaded' });
+
+    // Esperar a que el botón "Next: Parent/Guardian" esté visible (indica que el paso 1 está listo)
+    const nextBtn = this.page.getByRole('button', { name: /Next: Parent\/Guardian/i });
+    await nextBtn.waitFor({ state: 'visible', timeout: 90000 });
+    console.log('  Wizard Step 1 ready');
+  }
+
+  // -------------------------------------------------------------------------
+  // Helper para rellenar el formulario de nuevo parent en el paso 2
+  // -------------------------------------------------------------------------
+  async _fillNewParentForm(email) {
+    // First Name *
+    const firstNameField = getFormFieldByLabel(this.page, 'First Name *');
+    if (firstNameField) await firstNameField.fill('Test');
+
+    // Last Name *
+    const lastNameField = getFormFieldByLabel(this.page, 'Last Name *');
+    if (lastNameField) await lastNameField.fill('Parent');
+
+    // Type of ID *
+    const idTypeField = getFormFieldByLabel(this.page, 'Type of ID *');
+    if (idTypeField) {
+      const opts = await idTypeField.locator('option').allInnerTexts();
+      const pick = opts.find(o => o.trim() && !/select/i.test(o)) || opts[1];
+      await idTypeField.selectOption({ label: pick.trim() });
+    }
+
+    // Government ID (Last 4 Digits) *
+    const govIdField = getFormFieldByLabel(this.page, 'Government ID (Last 4 Digits) *');
+    if (govIdField) await govIdField.fill('A123');
+
+    // Phone *
+    const phoneField = getFormFieldByLabel(this.page, 'Phone *');
+    if (phoneField) await phoneField.fill('(555) 234-5678');
+
+    // Email * (ya debe estar lleno, pero aseguramos)
+    // const emailField = getFormFieldByLabel(this.page, 'Email *');
+    // if (emailField) await emailField.fill(email);
+
+    // Relationship to Child *
+    const relField = getFormFieldByLabel(this.page, 'Relationship to Child *');
+    if (relField) {
+      const opts = await relField.locator('option').allInnerTexts();
+      const pick = opts.find(o => o.trim() && !/select/i.test(o) && /guardian|father|mother/i.test(o)) || opts[1];
+      await relField.selectOption({ label: pick.trim() });
+    }
+
+    // Permissions (checkboxes)
+    const permissionLabels = [
+      'Primary Contact',
+      'Can Pickup Child',
+      'Can Authorize Medical Treatment',
+      'Can Authorize Activities'
+    ];
+    for (const labelText of permissionLabels) {
+      const cb = getFormFieldByLabel(this.page, labelText);
+      if (cb && !(await cb.isChecked().catch(() => false))) {
+        await cb.check();
+      }
+    }
+    // En _fillNewParentForm y _handleExistingParent
+    const docsCheckbox = this.page.locator('#all_documents_submitted_parent');
+    if (await docsCheckbox.isVisible().catch(() => false)) {
+      if (!(await docsCheckbox.isChecked().catch(() => false))) {
+        await docsCheckbox.check();
+      }
+    }
+    // Avanzar al paso 3 (hace clic en "Next: Medical Info")
+    const nextBtn = this.page.getByRole('button', { name: /Next: Medical Info/i }).first();
+    await nextBtn.click({ timeout: 10000 });
+  }
+
+  // -------------------------------------------------------------------------
+  // STEP 1: Child Information
+  // -------------------------------------------------------------------------
+  async fillStep1({ firstName, lastName, birthDate, gender, govId } = {}) {
+    const fName = getFormFieldByLabel(this.page, 'First Name *');
+    if (fName) await fName.fill(firstName || 'Auto');
+
+    const lName = getFormFieldByLabel(this.page, 'Last Name *');
+    if (lName) await lName.fill(lastName || 'TestChild');
+
+    const dobField = getFormFieldByLabel(this.page, 'Date of Birth *');
+    if (dobField) await dobField.fill(birthDate || '2025-03-15');
+
+    const genderField = getFormFieldByLabel(this.page, 'Gender *');
+    if (genderField) {
+      const opts = await genderField.locator('option').allInnerTexts().catch(() => []);
+      const pick = (gender || 'Male').trim();
+      if (opts.some(o => o.trim().toLowerCase() === pick.toLowerCase())) {
+        await genderField.selectOption({ label: pick });
+      } else if (opts.length > 1) {
+        await genderField.selectOption({ index: 1 });
+      }
+    }
+
+    if (govId) {
+      const govInput = this.page.locator('input[placeholder="A123"]').first();
+      if (await govInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await govInput.fill(govId);
+      }
+    }
+
+    const policyCb = getFormFieldByLabel(this.page, 'I accept the terms and policies of the institution regarding child enrollment and care.');
+    if (policyCb && !(await policyCb.isChecked().catch(() => false))) {
+      await policyCb.check();
+    }
+
+    console.log('  Step 1 filled');
+  }
+
+  async goNextStep1() {
+    const nextBtn = this.page.getByRole('button', { name: /Next: Parent\/Guardian/i });
+    await nextBtn.click({ timeout: 10000 });
+
+    // Esperar que el paso 2 se muestre (campo de búsqueda de email)
+    const searchInput = this.page.locator('input[placeholder*="email" i]').first();
+    await searchInput.waitFor({ state: 'visible', timeout: 30000 });
+    console.log('  Step 2 ready');
+  }
+
+  // -------------------------------------------------------------------------
+  // STEP 2: Parent/Guardian
+  // -------------------------------------------------------------------------
+  async fillStep2(parentEmail) {
+    const email = parentEmail || 'cavoxal760@ellbit.com';
+
+    const searchInput = this.page.locator('input[placeholder*="email" i]').first();
+    const searchBtn = this.page.getByRole('button', { name: /search/i }).first();
+
+    // 1. Esperar que el campo de búsqueda esté visible
+    await searchInput.waitFor({ state: 'visible', timeout: 30000 });
+
+    // 2. Escribir el email y buscar
+    await searchInput.fill(email);
+    await searchBtn.click();
+
+    // 3. Esperar a que aparezca el formulario de creación o la tarjeta de parent existente
+    const createSelector = 'h2:has-text("Create New Parent Profile"), h3:has-text("Create New Parent Profile")';
+    const existingSelector = 'text=Parent found with';
+
+    // Usar Promise.race para detectar el primero que aparezca
+    const result = await Promise.race([
+      this.page.waitForSelector(createSelector, { timeout: 15000 }).then(() => 'create'),
+      this.page.waitForSelector(existingSelector, { timeout: 15000 }).then(() => 'existing')
+    ]).catch(() => null);
+
+    if (result === 'create') {
+      // Apareció el formulario de creación
+      await this._fillNewParentForm(email);
+      return true;
+    } else if (result === 'existing') {
+      // Apareció la tarjeta de parent existente
+      await this._handleExistingParent();
+      return true;
+    } else {
+      console.log('  WARN: Could not detect either create form or existing parent card');
+      return false;
+    }
+  }
+
+  async _handleExistingParent() {
+    // Seleccionar el radio "Create New Family" (asumiendo que está presente y es el primero)
+    const newFamilyRadio = this.page.locator('input[type="radio"][value="new"]');
+    if (await newFamilyRadio.isVisible().catch(() => false)) {
+      const isChecked = await newFamilyRadio.isChecked().catch(() => false);
+      if (!isChecked) {
+        await newFamilyRadio.check();
+      }
+    } else {
+      // Si no, seleccionar el primer radio disponible (alguna familia existente)
+      const firstRadio = this.page.locator('input[type="radio"][name="family-selection"]').first();
+      if (await firstRadio.isVisible().catch(() => false)) {
+        await firstRadio.check();
+      }
+    }
+
+    // Marcar el checkbox de documentos
+    const docsCheckbox = this.page.locator('#all_documents_submitted_parent');
+    if (await docsCheckbox.isVisible().catch(() => false)) {
+      if (!(await docsCheckbox.isChecked().catch(() => false))) {
+        await docsCheckbox.check();
+      }
+    }
+
+    console.log('  Existing parent handled, ready for Next');
+  }
+
+  async goNextStep2() {
+    const nextBtn = this.page.getByRole('button', { name: /Next: Medical Info/i });
+    // Esperar hasta que el botón esté visible y habilitado (si no está visible, puede que ya estemos en step 3)
+    try {
+      await nextBtn.waitFor({ state: 'visible', timeout: 5000 });
+      await nextBtn.click({ timeout: 10000 });
+    } catch (e) {
+      // Si el botón no aparece, podría ser que ya estemos en el paso 3
+      const medicalTitle = this.page.locator('h2:has-text("Medical"), h3:has-text("Medical")').first();
+      await medicalTitle.waitFor({ state: 'visible', timeout: 5000 });
+      console.log('  Already on Step 3, skipping');
+      return;
+    }
+    console.log('  Advanced to Step 3');
+  }
+
+  // -------------------------------------------------------------------------
+  // STEP 3: Medical Info (se usa placeholder porque no hay labels claros)
+  // -------------------------------------------------------------------------
+  async fillStep3({ allergy } = {}) {
+    if (allergy) {
+      const input = this.page.locator('input[placeholder*="allergy" i]').first();
+      if (await input.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await input.fill(allergy);
+        await this.page.keyboard.press('Enter');
+      }
+    }
+  }
+
+  async goNextStep3() {
+    const btn = this.page.getByRole('button', { name: /Next: Enrollment/i });
+    await btn.waitFor({ state: 'visible', timeout: 20000 });
+    await btn.click({ timeout: 10000 });
+    console.log('  Advanced to Step 4');
+  }
+
+  // -------------------------------------------------------------------------
+  // STEP 4: Enrollment
+  // -------------------------------------------------------------------------
+  async fillStep4({ classroom } = {}) {
+    // Esperar que el formulario de inscripción esté listo (el botón "Complete Enrollment" o algún select)
+    const completeBtn = this.page.getByRole('button', { name: /Complete Enrollment/i });
+    await completeBtn.waitFor({ state: 'visible', timeout: 30000 });
+
+    // --- Select Classroom ---
+    const classroomField = getFormFieldByLabel(this.page, 'Select Classroom');
+    if (classroomField && await classroomField.isVisible().catch(() => false)) {
+      const optHandles = await classroomField.locator('option').elementHandles();
+      let targetVal = null;
+      for (const op of optHandles) {
+        const dis = await op.isDisabled().catch(() => false);
+        const txt = (await op.innerText()).trim();
+        const val = await op.getAttribute('value').catch(() => '');
+        if (!dis && txt && !/select classroom/i.test(txt) && val) { targetVal = val; break; }
+      }
+      if (targetVal) await classroomField.selectOption({ value: targetVal }).catch(() => { });
+    }
+
+    // --- Enrollment Type ---
+    const typeField = getFormFieldByLabel(this.page, 'Enrollment Type');
+    if (typeField && await typeField.isVisible().catch(() => false)) {
+      const optHandles = await typeField.locator('option').elementHandles();
+      let tVal = null;
+      for (const op of optHandles) {
+        const dis = await op.isDisabled().catch(() => false);
+        const txt = (await op.innerText()).trim();
+        const val = await op.getAttribute('value').catch(() => '');
+        if (!dis && txt && !/select enrollment/i.test(txt) && val) { tVal = val; break; }
+      }
+      if (tVal) await typeField.selectOption({ value: tVal }).catch(() => { });
+    }
+
+    // --- Start Date ---
+    const startDateField = getFormFieldByLabel(this.page, 'Start Date');
+    if (startDateField && await startDateField.isVisible().catch(() => false)) {
+      const today = new Date().toISOString().slice(0, 10);
+      await startDateField.fill(today).catch(() => { });
+    }
+
+    // --- Academic Year ---
+    const academicField = getFormFieldByLabel(this.page, 'Academic Year');
+    if (academicField && await academicField.isVisible().catch(() => false)) {
+      const tag = await academicField.evaluate(el => el.tagName.toLowerCase());
+      if (tag === 'select') {
+        const opts = await academicField.locator('option').allInnerTexts().catch(() => []);
+        const currentYear = String(new Date().getFullYear());
+        if (opts.some(o => o.trim() === currentYear)) {
+          await academicField.selectOption({ label: currentYear }).catch(() => { });
+        } else if (opts.length > 1) {
+          await academicField.selectOption({ index: 1 }).catch(() => { });
+        }
+      } else {
+        await academicField.fill(String(new Date().getFullYear())).catch(() => { });
+      }
+    }
+
+    // --- Sync Products (botón) ---
+    const syncBtn = this.page.getByRole('button', { name: /sync products/i });
+    if (await syncBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await syncBtn.click({ timeout: 5000 }).catch(() => { });
+    }
+
+    // --- Agregar primer ítem ---
+    const addFirst = this.page.getByRole('button', { name: /Add First Item/i });
+    const addItem = this.page.getByRole('button', { name: /^Add Item$/i });
+    if (await addFirst.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await addFirst.click({ timeout: 5000 }).catch(() => { });
+    } else if (await addItem.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await addItem.click({ timeout: 5000 }).catch(() => { });
+    }
+
+    // Seleccionar un producto (ej. Matrícula) - no hay label, usamos el select dentro del item
+    const productSelects = this.page.locator('select').filter({ has: this.page.locator('option:has-text("Matricula")') });
+    if (await productSelects.count() > 0) {
+      const sel = productSelects.first();
+      await sel.selectOption({ label: /matricula/i }).catch(() => { });
+      const qtyInput = this.page.locator('input[type="number"]').first();
+      if (await qtyInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await qtyInput.fill('1').catch(() => { });
+      }
+    }
+
+    // --- Aceptar documentos (checkbox) ---
+    const docsCb = getFormFieldByLabel(this.page, 'All Required Documents Submitted (Mandatory for onboarding)');
+    if (docsCb && !(await docsCb.isChecked().catch(() => false))) {
+      await docsCb.check();
+    }
+
+    console.log('  Step 4 filled');
+  }
+
+  // -------------------------------------------------------------------------
+  // Submit
+  // -------------------------------------------------------------------------
+  async submit() {
+    const completeBtn = this.page.getByRole('button', { name: /Complete Enrollment/i }).first();
+    await completeBtn.waitFor({ state: 'visible', timeout: 25000 });
+
+    // Verificar si el botón está habilitado
+    const isDisabled = await completeBtn.evaluate(b => b.disabled).catch(() => false);
+    console.log('  submit: Complete Enrollment disabled=' + isDisabled);
+
+    await completeBtn.click().catch(e => console.log('  submit click error: ' + e.message));
+
+    // Esperar a que la URL cambie (redirección a la página del niño)
+    try {
+      await this.page.waitForURL(url => !url.includes('/new'), { timeout: 15000 });
+      console.log('  submit: redirected to ' + this.page.url());
+      return true;
+    } catch (e) {
+      console.log('  WARN: UI submit did not navigate; this is a real UI failure, NOT an API fallback');
+      return false;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Método completo para ejecutar todo el wizard
+  // -------------------------------------------------------------------------
+  async completeWizard({ childData, parentEmail, classroom } = {}) {
+    const c = childData || {};
+    await this.fillStep1({
+      firstName: c.firstName || 'Auto',
+      lastName: c.lastName || 'TestChild',
+      birthDate: c.birthDate || '2025-03-15',
+      gender: c.gender || 'Male',
+    });
+    await this.goNextStep1();
+    await this.fillStep2(parentEmail);
+    await this.goNextStep2();
+    await this.goNextStep3();
+    await this.fillStep4({ classroom });
+    await this.submit();
+  }
+
+  // -------------------------------------------------------------------------
+  // Verificaciones y helpers
+  // -------------------------------------------------------------------------
+  async isSuccessVisible() {
+    const url = this.page.url();
+    if (url.includes('/admin/children/') && !url.includes('/new')) return true;
+
+    try {
+      await this.page.waitForFunction(() => {
+        const body = document.body.innerText.toLowerCase();
+        return body.includes('successful') || body.includes('created') || body.includes('child details');
+      }, { timeout: 15000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async getChildStatus() {
+    try {
+      await this.page.waitForFunction(() => !document.body.innerText.includes('Loading...'), { timeout: 20000 }).catch(() => { });
+      const txt = (await this.page.innerText('body')).toLowerCase();
+      if (txt.includes('pending')) return 'Pending';
+      if (txt.includes('active')) return 'Active';
+      if (txt.includes('graduated')) return 'Graduated';
+      if (txt.includes('withdrawn')) return 'Withdrawn';
+      if (txt.includes('transferred')) return 'Transferred';
+    } catch { }
+    return null;
+  }
+
+  async isDuplicateErrorVisible() {
+    try {
+      await this.page.waitForFunction(() => {
+        const body = document.body.innerText.toLowerCase();
+        return body.includes('already exists') || body.includes('duplicate');
+      }, { timeout: 10000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Métodos auxiliares para API (se mantienen igual)
+  // -------------------------------------------------------------------------
+  async _getAuthHeaders() {
+    const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc5NDc4MzE5LCJleHAiOjE5MzcxNTgzMTl9.VbuKKxQWSNJ0GFSU8VE-RQFJhx1wR-kD8NPgpi83VbI';
+    const ADMIN = 's5n4v1k1z6@ruutukf.com';
+    const ADMIN_PASS = 'Algo12345';
+
+    if (this._cachedAuth && Date.now() < this._cachedAuth.expiresAt) {
+      return this._cachedAuth.headers;
+    }
+
+    try {
+      const cookies = await this.page.context().cookies();
+      const authCookie = cookies.find(c => c.name === 'sb-api-auth-token');
+      if (authCookie) {
+        const payload = JSON.parse(Buffer.from(authCookie.value.replace('base64-', ''), 'base64').toString());
+        if (payload.access_token && payload.expires_at && payload.expires_at * 1000 > Date.now() + 60000) {
+          this._cachedAuth = { headers: { 'Authorization': 'Bearer ' + payload.access_token, 'apikey': key }, expiresAt: Date.now() + 55000 };
+          return this._cachedAuth.headers;
+        }
+      }
+    } catch { }
+
+    const loginBody = JSON.stringify({ email: ADMIN, password: ADMIN_PASS });
+    const login = await this._httpsReq('/auth/v1/token?grant_type=password&email=' + encodeURIComponent(ADMIN), 'POST', { 'apikey': key, 'Content-Type': 'application/json' }, loginBody);
+    if (login.status === 200 && login.json && login.json.access_token) {
+      console.log('  auth: fresh token issued via auth endpoint');
+      this._cachedAuth = { headers: { 'Authorization': 'Bearer ' + login.json.access_token, 'apikey': key }, expiresAt: Date.now() + 55000 };
+      return this._cachedAuth.headers;
+    }
+    console.log('  auth: fresh-token fallback failed (status ' + login.status + ')');
+    return { 'apikey': key };
+  }
+
+  _httpsReq(path, method, headers, body) {
+    return new Promise((resolve) => {
+      const data = body ? Buffer.from(body) : null;
+      const req = require('https').request('https://api.presupbase.juvomos.com' + path, {
+        method,
+        headers: Object.assign({}, headers, data ? { 'Content-Length': data.length } : {})
+      }, (res) => {
+        let d = '';
+        res.on('data', (c) => (d += c));
+        res.on('end', () => {
+          let json = null;
+          try { json = JSON.parse(d); } catch { }
+          resolve({ status: res.statusCode, body: d, json });
+        });
+      });
+      req.on('error', (e) => resolve({ status: 0, body: e.message, json: null }));
+      if (data) req.write(data);
+      req.end();
+    });
+  }
+
+  async _rest(table, method, body, select) {
+    const headers = await this._getAuthHeaders();
+    if (!headers) return { status: 0, json: null };
+    const h = Object.assign({}, headers, { 'Content-Type': 'application/json' });
+    if (select) h['Prefer'] = 'return=representation';
+    const path = '/rest/v1/' + table + (method === 'GET' && select ? '?select=' + select : '');
+    const res = await this._httpsReq(path, method, h, body ? JSON.stringify(body) : null);
+    if (res.status >= 400) console.log('  _rest[' + table + '] ' + res.status + ': ' + res.body);
+    return res;
+  }
+
+  async _getById(table, id, select) {
+    const headers = await this._getAuthHeaders();
+    if (!headers) return null;
+    const path = '/rest/v1/' + table + '?id=eq.' + id + (select ? '&select=' + select : '');
+    const res = await this._httpsReq(path, 'GET', headers);
+    if (res.status === 200 && res.json && res.json.length) return res.json[0];
+    return null;
+  }
+
+  _uid(prefix) {
+    return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  _round2(n) { return Number((Math.round(n * 100) / 100).toFixed(2)); }
+
+  async createOnboardingEntities(opts) {
+    opts = opts || {};
+    const SCHOOL = 'f14b95b1-72d7-4970-9784-df60ad9a02ee';
+    const CLASSROOM = opts.classroomId || '97393759-cd03-42e5-b052-fc3d4d196a57';
+    const SVC = 'cba19d20-d848-43c8-8437-c3b3d36a49e8'; // Matricula
+    const svc = opts.service || { price: 45, tax_rate: 0.12, billing_frequency: 'monthly', name: 'Matricula' };
+    const tax = this._round2(svc.price * svc.tax_rate);
+    const total = this._round2(svc.price + tax);
+    const today = new Date().toISOString().slice(0, 10);
+    const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    const summary = { steps: {}, total, tax, price: svc.price };
+
+
+    const fam = await this._rest('families', 'POST', {
+      school_id: SCHOOL, family_code: this._uid('FAM'),
+      family_name: opts.familyName || 'E2E Family'
+    }, 'id');
+    summary.steps.family = fam.status;
+    summary.familyId = fam.json && fam.json[0] && fam.json[0].id;
+
+    const prof = await this._rest('profiles', 'POST', {
+      first_name: opts.parentFirstName || (opts.firstName || 'Onboard'),
+      last_name: opts.parentLastName || (opts.lastName || 'Parent'),
+      email_secondary: this._uid('pp') + '@test.com', is_active: true
+    }, 'id');
+    summary.steps.profile = prof.status;
+    summary.profileId = prof.json && prof.json[0] && prof.json[0].id;
+    if (summary.profileId && summary.familyId) {
+      const fm = await this._rest('family_members', 'POST', {
+        family_id: summary.familyId, profile_id: summary.profileId,
+        relationship: 'father', is_primary_contact: true, is_financial_responsible: true
+      }, 'id');
+      summary.steps.familyMember = fm.status;
+      summary.familyMemberId = fm.json && fm.json[0] && fm.json[0].id;
+    }
+
+
+    const child = await this._rest('children', 'POST', {
+      school_id: SCHOOL,
+      first_name: opts.firstName || 'Onboard',
+      last_name: opts.lastName || 'Child',
+      birth_date: opts.birthDate || '2023-01-01',
+      gender: opts.gender || 'Male', status: 'active'
+    }, 'id');
+    summary.steps.child = child.status;
+    summary.childId = child.json && child.json[0] && child.json[0].id;
+
+
+    if (summary.childId && summary.familyId) {
+      const cf = await this._rest('child_families', 'POST', {
+        child_id: summary.childId, family_id: summary.familyId,
+        family_type: 'primary', is_active: true
+      });
+      summary.steps.childFamily = cf.status;
+
+
+      const cfr = await this._rest('child_financial_responsibles', 'POST', {
+        child_id: summary.childId, family_member_id: summary.familyMemberId,
+        responsibility_percentage: 100, is_primary: true, is_active: true,
+        start_date: today
+      });
+      summary.steps.childFinancialResponsible = cfr.status;
+    }
+
+
+    const enr = await this._rest('enrollments', 'POST', {
+      child_id: summary.childId, school_id: SCHOOL,
+      enrollment_code: this._uid('ENR'),
+      academic_year: String(new Date().getFullYear()),
+      enrollment_type: 'full_time', enrollment_date: today,
+      start_date: today, status: 'active'
+    }, 'id');
+    summary.steps.enrollment = enr.status;
+    summary.enrollmentId = enr.json && enr.json[0] && enr.json[0].id;
+
+
+    if (summary.enrollmentId) {
+      const ei = await this._rest('enrollment_items', 'POST', {
+        enrollment_id: summary.enrollmentId, product_service_id: SVC,
+        quantity: 1, unit_price: svc.price, discount_amount: 0,
+        tax_amount: tax, total_amount: total, billing_frequency: svc.billing_frequency
+      });
+      summary.steps.enrollmentItem = ei.status;
+    }
+
+    const ce = await this._rest('classroom_enrollments', 'POST', {
+      child_id: summary.childId, classroom_id: CLASSROOM,
+      academic_year: String(new Date().getFullYear()),
+      enrolled_at: today, status: 'active'
+    }, 'id');
+    summary.steps.classroomEnrollment = ce.status;
+    summary.classroomEnrollmentId = ce.json && ce.json[0] && ce.json[0].id;
+
+
+    const inv = await this._rest('invoices', 'POST', {
+      school_id: SCHOOL, family_id: summary.familyId,
+      child_id: summary.childId,
+      responsible_family_member_id: summary.familyMemberId,
+      enrollment_id: summary.enrollmentId,
+      invoice_number: this._uid('INV-E2E'),
+      subtotal: svc.price, tax_amount: tax, discount_amount: 0,
+      total_amount: total, amount_paid: 0, balance_due: total,
+      currency: 'USD', issue_date: today, due_date: nextMonth,
+      status: 'pending'
+    }, 'id');
+    summary.steps.invoice = inv.status;
+    summary.invoiceId = inv.json && inv.json[0] && inv.json[0].id;
+
+    if (summary.invoiceId) {
+      const ii = await this._rest('invoice_items', 'POST', {
+        invoice_id: summary.invoiceId, product_service_id: SVC,
+        description: svc.name, quantity: 1, unit_price: svc.price,
+        discount_amount: 0, tax_amount: tax, line_total: total
+      });
+      summary.steps.invoiceItem = ii.status;
+    }
+
+
+
+    return summary;
+  }
+
+
+  async payInvoice(invoiceId, opts) {
+    opts = opts || {};
+    const SCHOOL = 'f14b95b1-72d7-4970-9784-df60ad9a02ee';
+    const svc = opts.service || { price: 45, tax_rate: 0.12, billing_frequency: 'monthly', name: 'Matricula' };
+    const tax = this._round2(svc.price * svc.tax_rate);
+    const total = this._round2(svc.price + tax);
+    const today = new Date().toISOString().slice(0, 10);
+    const res = {};
+    const inv = await this._getById('invoices', invoiceId, 'id,family_id,child_id,responsible_family_member_id,total_amount');
+    const familyId = inv && inv.family_id;
+    const childId = inv && inv.child_id;
+    const paidBy = inv && inv.responsible_family_member_id;
+
+    const pay = await this._rest('payments', 'POST', {
+      school_id: SCHOOL, invoice_id: invoiceId,
+      family_id: familyId, child_id: childId,
+      paid_by_family_member_id: paidBy,
+      payment_number: this._uid('PAY-E2E'),
+      amount: total, currency: 'USD', payment_method: 'online',
+      payment_date: today, status: 'completed'
+    }, 'id');
+    res.payment = pay.status;
+    const paymentId = pay.json && pay.json[0] && pay.json[0].id;
+
+    const upd = await this._httpsReq(
+      '/rest/v1/invoices?id=eq.' + invoiceId, 'PATCH',
+      Object.assign({}, await this._getAuthHeaders(), { 'Content-Type': 'application/json' }),
+      JSON.stringify({ amount_paid: total, balance_due: 0, status: 'paid', paid_date: today })
+    );
+    res.invoiceUpdate = upd.status;
+
+    try {
+      const prov = await this._rest('payment_providers', 'GET', null, 'id');
+      const provId = prov.json && prov.json[0] && prov.json[0].id;
+      if (provId && paymentId) {
+        const tx = await this._rest('payment_transactions', 'POST', {
+          payment_id: paymentId, invoice_id: invoiceId,
+          school_id: SCHOOL, payment_provider_id: provId,
+          transaction_type: 'charge', amount: total, currency: 'USD',
+          status: 'succeeded', provider_transaction_id: this._uid('MOCK'),
+          idempotency_key: this._uid('IDEM')
+        });
+        res.paymentTransaction = tx.status;
+      }
+    } catch { }
+
+    return res;
+  }
+
+
+  async verifyInvoicePaid(invoiceId) {
+    const inv = await this._getById('invoices', invoiceId, 'id,status,amount_paid,balance_due');
+    return inv && inv.status === 'paid' && this._round2(inv.amount_paid) > 0;
+  }
+}
+
+module.exports = { OnboardingPage };
+</file>
+
+<file path="e2e/template.spec.ts">
+// e2e/feature.spec.ts
+import { test, expect, BrowserContext, Page } from '@playwright/test';
+import {
+  clickTableAction,
+  createCharge,
+  expectToast,
+  findTableRow,
+  getModal,
+  verifyFormFields,
+} from './utils/helpers';
+import { apiDelete, apiPatch } from './utils/api';
+import { loginViaUI } from './utils/auth';
+
+test.describe('Feature Name', () => {
+  let sharedContext: BrowserContext;
+  let sharedPage: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    sharedContext = await browser.newContext();
+    sharedPage = await sharedContext.newPage();
+    await loginViaUI(sharedPage);
+  });
+
+  test.afterAll(async () => {
+    await sharedContext.close();
+  });
+
+  test('CP-XXX-01 - Test description', async () => {
+    
+  });
+});
+</file>
+
+<file path="e2e/tests/billing/charge.spec.ts">
+// e2e/charge.spec.ts
+import { test, expect, BrowserContext, Page } from '@playwright/test';
+import {
+  clickTableAction,
+  createCharge,
+  debugLog,
+  expectToast,
+  findTableRow,
+  getFieldValueByLabel,
+  getModal,
+  verifyFormFields,
+} from '../utils/helpers';
+import { apiDelete, apiGet, apiPatch } from '../utils/api';
+import { loginViaUI } from '../utils/auth';
+
+test.describe('Create Charge', () => {
+  let sharedContext: BrowserContext;
+  let sharedPage: Page;
+
+  // 0. Login - Una sola vez antes de todas las pruebas
+  test.beforeAll(async ({ browser }) => {
+    sharedContext = await browser.newContext();
+    sharedPage = await sharedContext.newPage();
+    await loginViaUI(sharedPage);
+  });
+
+  // Cerrar el contexto después de todas las pruebas
+  test.afterAll(async () => {
+    await sharedContext.close();
+  });
+
+  // 1. UI validation
+  test('CP-CH-01 - Verify Create Charge UI', async () => {
+    await sharedPage.goto('/admin/billing/charges/new');
+
+    await expect(sharedPage.getByText('Create Charge').first()).toBeVisible();
+    await expect(sharedPage.getByRole('textbox', { name: 'Search for a child...' })).toBeVisible();
+    await expect(sharedPage.getByRole('textbox', { name: 'E.g., Late pickup charge - 30' })).toBeVisible();
+    await expect(sharedPage.getByRole('spinbutton')).toBeVisible();
+    await expect(sharedPage.locator('input[type="date"]')).toBeVisible();
+    await expect(sharedPage.getByRole('textbox', { name: 'Additional details about the' })).toBeVisible();
+    await expect(sharedPage.getByRole('button', { name: 'Create Charge' })).toBeVisible();
+  });
+
+  // 2. Required fields
+  test('CP-CH-02 - Validate required fields', async () => {
+    await sharedPage.goto('/admin/billing/charges/new');
+
+    await sharedPage.getByRole('button', { name: 'Create Charge' }).click();
+
+    await expect(sharedPage.getByText('Child is required')).toBeVisible();
+    await expect(sharedPage.getByText('Selected child must have an')).toBeVisible();
+    await expect(sharedPage.getByText('Description is required')).toBeVisible();
+    await expect(sharedPage.getByText('Amount must be greater than')).toBeVisible();
+  });
+
+  // 3. Create successfully
+  test('CP-CH-03 - Create charge successfully', async () => {
+    const charge = await createCharge(sharedPage);
+
+    await expect(sharedPage.getByRole('heading', { name: 'Pending' })).toBeVisible();
+    await expect(sharedPage.getByText(charge.description)).toBeVisible();
+
+    const dueDate = charge.due_date || new Date().toISOString().split('T')[0];
+    const dueDateParts = dueDate.split('-');
+    const formattedDate = `${dueDateParts[2]}/${dueDateParts[1]}/${dueDateParts[0]}`;
+    await expect(sharedPage.getByText(formattedDate)).toBeVisible();
+
+    if (charge.notes) {
+      await expect(sharedPage.getByText(charge.notes)).toBeVisible();
+    }
+    await expect(sharedPage.getByText(`$${charge.amount}`)).toBeVisible();
+  });
+
+  // 4. Edit successfully
+  test('CP-CH-04 - Edit charge fields', async () => {
+    await sharedPage.goto('/admin/billing/charges');
+
+    await clickTableAction(sharedPage, 'Edit');
+    await expect(sharedPage.getByRole('heading', { name: 'Pending' })).toBeVisible();
+
+    await verifyFormFields(sharedPage, [
+      { label: 'Child' },
+      { label: 'Charge Type' },
+      { label: 'Description' },
+      { label: 'Amount' },
+      { label: 'Due Date' },
+      { label: 'Additional Notes' },
+      { label: 'Charge Status' }
+    ], 'form');
+
+    const newDescription = 'Late 50 minutes changed';
+    const newAmount = '4.49';
+    let newDueDate = new Date();
+    newDueDate.setMonth(newDueDate.getMonth() + 1);
+    const newDueDateStr = newDueDate.toISOString().split('T')[0];
+    const newNotes = 'Aditional Notes Example';
+
+    await sharedPage.getByRole('textbox').nth(2).click();
+    await sharedPage.getByRole('textbox').nth(2).fill(newDescription);
+    await sharedPage.getByRole('spinbutton').click();
+    await sharedPage.getByRole('spinbutton').fill(newAmount);
+    await sharedPage.locator('input[type="date"]').fill(newDueDateStr);
+    await sharedPage.locator('textarea').click();
+    await sharedPage.locator('textarea').fill(newNotes);
+
+    await sharedPage.getByRole('button', { name: 'Save Charge' }).click();
+
+    await expectToast(sharedPage, { type: 'success' });
+
+    await expect(sharedPage.getByText(newDescription)).toBeVisible();
+    const dueDateParts = newDueDateStr.split('-');
+    const formattedDate = `${dueDateParts[2]}/${dueDateParts[1]}/${dueDateParts[0]}`;
+    await expect(sharedPage.getByText(formattedDate)).toBeVisible();
+    await expect(sharedPage.getByText(newNotes)).toBeVisible();
+    await expect(sharedPage.getByText(`$${newAmount}`)).toBeVisible();
+  });
+
+  // 5. Delete from table (search by Status Pending)
+  test('CP-CH-05 - Delete charge from Table (Pending)', async () => {
+    await sharedPage.goto('/admin/billing/charges');
+
+    await clickTableAction(sharedPage, 'Delete', { column: 'Status', value: 'Pending' });
+    const modal = getModal(sharedPage);
+    await modal.getByRole('button', { name: 'Delete' }).click();
+
+    await expectToast(sharedPage, { type: 'success' });
+  });
+
+  // 6. Delete from charge view (extra)
+  test('CP-CH-06 - Delete charge from Charge view', async () => {
+    const charge = await createCharge(sharedPage);
+
+    sharedPage.once('dialog', dialog => {
+      debugLog(`Dialog message: ${dialog.message()}`);
+      dialog.accept().catch(() => { });
+    });
+
+    await sharedPage.getByRole('button', { name: 'Delete' }).first().click();
+
+    await expectToast(sharedPage, { type: 'success' });
+  });
+
+  test('CP-CH-07 - Change charge to Accepted and Invoice created', async () => {
+    // 1. Crear un cargo y guardar su ID
+    const charge = await createCharge(sharedPage);
+    const chargeId = charge.id;
+
+    // 2. Abrir el modal de aceptación
+    await sharedPage.getByRole('button', { name: 'Accept' }).click();
+
+    // 3. Completar el motivo y confirmar
+    await sharedPage.getByRole('button', { name: 'Confirm Accept' }).click();
+    await expect(sharedPage.getByText('A reason is required to accept')).toBeVisible();
+
+    // 4. Capturar la fecha de vencimiento de la factura del modal
+    const invoiceDueDateValue = await getFieldValueByLabel(sharedPage, 'Invoice Due Date');
+    expect(invoiceDueDateValue, 'El campo Invoice Due Date debe tener un valor').not.toBeNull();
+    debugLog('📅 Invoice Due Date (modal):', invoiceDueDateValue);
+
+    await sharedPage.getByRole('textbox', { name: 'Enter the reason for this' }).fill('QA Test Accept');
+    await sharedPage.getByRole('button', { name: 'Confirm Accept' }).click();
+
+    // 5. Extraer número de factura del toast
+    const toastMessage = await expectToast(sharedPage, { type: 'success' });
+    const invoiceMatch = toastMessage.match(/(INV[^\s]*)/);
+    expect(invoiceMatch, 'El toast debe contener un número de factura que comience con INV').not.toBeNull();
+    const invoiceNumber = invoiceMatch![1];
+    debugLog('🧾 Invoice Number:', invoiceNumber);
+
+    // 6. Obtener el charge actualizado (incluyendo relaciones)
+    const chargeResponse = await apiGet(
+      sharedPage,
+      `/rest/v1/charges?id=eq.${chargeId}&select=*,family:families(id,family_name,family_code),child:children(id,first_name,last_name)`
+    );
+    const chargeData = (await chargeResponse.json())[0];
+    expect(chargeData, 'El cargo debe existir después de aceptar').toBeDefined();
+
+    // 7. Obtener la factura recién creada
+    const invoiceResponse = await apiGet(sharedPage, `/rest/v1/invoices?invoice_number=eq.${invoiceNumber}`);
+    const invoiceData = (await invoiceResponse.json())[0];
+    expect(invoiceData, `No se encontró la factura con número ${invoiceNumber}`).toBeDefined();
+
+    // 8. Validaciones clave
+    // 8.1. Fecha de vencimiento
+    expect(invoiceData.due_date, 'La fecha de vencimiento de la factura debe coincidir con la del modal')
+      .toBe(invoiceDueDateValue);
+
+    // 8.2. Montos
+    expect(invoiceData.subtotal, 'El subtotal debe ser el monto del cargo').toBe(chargeData.amount);
+    expect(invoiceData.total_amount, 'El total debe ser el monto del cargo').toBe(chargeData.amount);
+    expect(invoiceData.balance_due, 'El balance pendiente debe ser el total').toBe(chargeData.amount);
+    expect(invoiceData.amount_paid, 'El monto pagado debe ser 0').toBe(0);
+    expect(invoiceData.tax_amount, 'El impuesto debe ser 0').toBe(0);
+    expect(invoiceData.discount_amount, 'El descuento debe ser 0').toBe(0);
+
+    // 8.3. Relaciones y otros campos
+    expect(invoiceData.child_id, 'El child_id debe coincidir').toBe(chargeData.child_id);
+    expect(invoiceData.family_id, 'El family_id debe coincidir').toBe(chargeData.family_id);
+    expect(invoiceData.currency, 'La moneda debe coincidir').toBe(chargeData.currency);
+    expect(invoiceData.status, 'El estado de la factura debe ser "pending"').toBe('pending');
+
+    // 9. Verificar la UI
+    await expect(sharedPage.getByRole('heading', { name: 'Accepted' })).toBeVisible();
+
+    debugLog('✅ Factura creada exitosamente y validada contra el cargo');
+  });
+
+  // 8. Change status to Waived
+  test('CP-CH-08 - Change charge to Waived', async () => {
+    await createCharge(sharedPage);
+
+    await sharedPage.getByRole('button', { name: 'Waive' }).click();
+
+    await sharedPage.getByRole('button', { name: 'Confirm Waive' }).click();
+    await expect(sharedPage.getByText('A reason is required to waive')).toBeVisible();
+
+    await sharedPage.getByRole('textbox', { name: 'Enter the reason for this' }).fill('QA Test Waive');
+    await sharedPage.getByRole('button', { name: 'Confirm Waive' }).click();
+
+    await expectToast(sharedPage, { type: 'success' });
+    await expect(sharedPage.getByRole('heading', { name: 'Waived' })).toBeVisible();
+  });
+
+  // 9. Change status to Disputed
+  test('CP-CH-09 - Change charge to Disputed', async () => {
+    await createCharge(sharedPage);
+
+    await sharedPage.getByRole('button', { name: 'Dispute' }).click();
+
+    await sharedPage.getByRole('button', { name: 'Confirm Dispute' }).click();
+    await expect(sharedPage.getByText('A reason is required to dispute')).toBeVisible();
+
+    await sharedPage.getByRole('textbox', { name: 'Enter the reason for this' }).fill('QA Test Dispute');
+    await sharedPage.getByRole('button', { name: 'Confirm Dispute' }).click();
+
+    await expectToast(sharedPage, { type: 'success' });
+    await expect(sharedPage.getByRole('heading', { name: 'Disputed' })).toBeVisible();
+  });
+
+  // ========== CP-CH-10 ==========
+  test('CP-CH-10 - Eliminar un cargo pendiente vía API (DELETE) debe eliminarlo correctamente', async () => {
+    // Crear un cargo pendiente (esto ya genera uno nuevo)
+    const charge = await createCharge(sharedPage);
+    const chargeId = charge.id;
+
+    // (Opcional) Verificar que el botón Delete es visible en la UI, pero el test se enfoca en API
+    // No es necesario porque el objetivo es probar la API directamente.
+
+    // Obtener el estado actual del cargo (pre)
+    const preDeleteGetResponse = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const preData = await preDeleteGetResponse.json();
+
+    // Intentar eliminar por API
+    await apiDelete(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+
+    // Obtener el estado después del DELETE (post)
+    const posDeleteGetResponse = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const postData = await posDeleteGetResponse.json();
+
+    // Verificar que el cargo ya no existe (array vacío)
+    expect(postData, 'El cargo pendiente debería haber sido eliminado de la base de datos').toHaveLength(0);
+    // También podríamos comparar que no es igual al pre
+    expect(preData).not.toEqual(postData);
+  });
+
+  // ========== CP-CH-11 ==========
+  test('CP-CH-11 - No debe permitir la eliminación de un cargo Aceptado', async () => {
+    await sharedPage.goto('/admin/billing/charges');
+    const row = await findTableRow(sharedPage, { column: 'Status', value: 'Accepted' });
+    await expect(
+      row.getByRole('link', { name: 'Delete' }).or(row.getByRole('button', { name: 'Delete' })),
+      'El botón Eliminar NO debe ser visible para un cargo Aceptado en la tabla'
+    ).not.toBeVisible();
+
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Accepted' });
+    await expect(sharedPage.getByRole('heading', { name: 'Charge Details' })).toBeVisible();
+    await expect(
+      sharedPage.getByRole('link', { name: 'Delete' }).or(sharedPage.getByRole('button', { name: 'Delete' })),
+      'El botón Eliminar NO debe ser visible en la vista de detalles para un cargo Aceptado'
+    ).not.toBeVisible();
+
+    const chargeId = (await sharedPage.url()).split('/').pop();
+    debugLog('ChargeId', chargeId);
+
+    // Obtener estado antes de intentar eliminar
+    const preDeleteGetResponse = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const preData = await preDeleteGetResponse.json();
+
+    // Intentar eliminar por API
+    await apiDelete(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+
+    // Obtener estado después
+    const posDeleteGetResponse = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const postData = await posDeleteGetResponse.json();
+
+    // Verificar que el cargo no se eliminó (los datos deben ser idénticos)
+    expect(preData, 'El cargo Aceptado NO debe haberse eliminado, los datos deben coincidir').toEqual(postData);
+  });
+
+  // ========== CP-CH-12 ==========
+  test('CP-CH-12 - No debe permitir la eliminación de un cargo Condonado (Waive)', async () => {
+    await sharedPage.goto('/admin/billing/charges');
+    const row = await findTableRow(sharedPage, { column: 'Status', value: 'Waived' });
+    await expect(
+      row.getByRole('link', { name: 'Delete' }).or(row.getByRole('button', { name: 'Delete' })),
+      'El botón Eliminar NO debe ser visible para un cargo Condonado (Waive) en la tabla'
+    ).not.toBeVisible();
+
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Waived' });
+    await expect(sharedPage.getByRole('heading', { name: 'Charge Details' })).toBeVisible();
+    await expect(
+      sharedPage.getByRole('link', { name: 'Delete' }).or(sharedPage.getByRole('button', { name: 'Delete' })),
+      'El botón Eliminar NO debe ser visible en la vista de detalles para un cargo Condonado (Waive)'
+    ).not.toBeVisible();
+
+    const chargeId = (await sharedPage.url()).split('/').pop();
+    debugLog('ChargeId', chargeId);
+
+    const preDeleteGetResponse = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const preData = await preDeleteGetResponse.json();
+
+    await apiDelete(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+
+    const posDeleteGetResponse = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const postData = await posDeleteGetResponse.json();
+
+    expect(preData, 'El cargo Condonado NO debe haberse eliminado, los datos deben coincidir').toEqual(postData);
+  });
+
+  // ========== CP-CH-13 ==========
+  test('CP-CH-13 - No debe permitir la eliminación de un cargo en Disputa', async () => {
+    await sharedPage.goto('/admin/billing/charges');
+    const row = await findTableRow(sharedPage, { column: 'Status', value: 'Disputed' });
+    await expect(
+      row.getByRole('link', { name: 'Delete' }).or(row.getByRole('button', { name: 'Delete' })),
+      'El botón Eliminar NO debe ser visible para un cargo en Disputa en la tabla'
+    ).not.toBeVisible();
+
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Disputed' });
+    await expect(sharedPage.getByRole('heading', { name: 'Charge Details' })).toBeVisible();
+    await expect(
+      sharedPage.getByRole('link', { name: 'Delete' }).or(sharedPage.getByRole('button', { name: 'Delete' })),
+      'El botón Eliminar NO debe ser visible en la vista de detalles para un cargo en Disputa'
+    ).not.toBeVisible();
+
+    const chargeId = (await sharedPage.url()).split('/').pop();
+    debugLog('ChargeId', chargeId);
+
+    const preDeleteGetResponse = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const preData = await preDeleteGetResponse.json();
+
+    await apiDelete(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+
+    const posDeleteGetResponse = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const postData = await posDeleteGetResponse.json();
+
+    expect(preData, 'El cargo en Disputa NO debe haberse eliminado, los datos deben coincidir').toEqual(postData);
+  });
+
+  // 14. Should not allow edit of Accepted charge
+  test('CP-CH-14 - No debe permitir la edición de un cargo Aceptado', async () => {
+    await sharedPage.goto('/admin/billing/charges');
+    const row = await findTableRow(sharedPage, { column: 'Status', value: 'Accepted' });
+    await expect(
+      row.getByRole('link', { name: 'Edit' }).or(row.getByRole('button', { name: 'Edit' })),
+      'El botón Editar NO debe ser visible para un cargo Aceptado en la tabla'
+    ).not.toBeVisible();
+
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Accepted' });
+    await expect(sharedPage.getByRole('heading', { name: 'Charge Details' })).toBeVisible();
+    await expect(
+      sharedPage.getByRole('button', { name: 'Edit Charge' }).or(sharedPage.getByRole('link', { name: 'Edit Charge' })),
+      'El botón Editar Cargo NO debe ser visible en la vista de detalles para un cargo Aceptado'
+    ).not.toBeVisible();
+
+    const chargeId = (await sharedPage.url()).split('/').pop();
+    debugLog('ChargeId', chargeId);
+    expect(chargeId, 'El ID del cargo debe estar definido para un cargo Aceptado').toBeDefined();
+
+    // Obtener descripción original para comparar
+    const getBefore = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const beforeData = await getBefore.json();
+    const originalDescription = beforeData[0]?.description;
+
+    const newDescription = 'Description changed via API';
+    await apiPatch(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`, { description: newDescription });
+
+    // Verificar que la descripción NO cambió
+    const getAfter = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const afterData = await getAfter.json();
+    expect(afterData[0].description, 'La edición no debe ser permitida para un cargo Aceptado').toBe(originalDescription);
+  });
+
+  // 15. Should not allow edit of Waived charge
+  test('CP-CH-15 - No debe permitir la edición de un cargo Condonado (Waive)', async () => {
+    await sharedPage.goto('/admin/billing/charges');
+    const row = await findTableRow(sharedPage, { column: 'Status', value: 'Waived' });
+    await expect(
+      row.getByRole('link', { name: 'Edit' }).or(row.getByRole('button', { name: 'Edit' })),
+      'El botón Editar NO debe ser visible para un cargo Condonado (Waive) en la tabla'
+    ).not.toBeVisible();
+
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Waived' });
+    await expect(sharedPage.getByRole('heading', { name: 'Charge Details' })).toBeVisible();
+    await expect(
+      sharedPage.getByRole('button', { name: 'Edit Charge' }).or(sharedPage.getByRole('link', { name: 'Edit Charge' })),
+      'El botón Editar Cargo NO debe ser visible en la vista de detalles para un cargo Condonado (Waive)'
+    ).not.toBeVisible();
+
+    const chargeId = (await sharedPage.url()).split('/').pop();
+    debugLog('ChargeId', chargeId);
+    expect(chargeId, 'El ID del cargo debe estar definido para un cargo Condonado (Waive)').toBeDefined();
+
+    // Obtener descripción original
+    const getBefore = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const beforeData = await getBefore.json();
+    const originalDescription = beforeData[0]?.description;
+
+    const newDescription = 'Description changed via API';
+    await apiPatch(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`, { description: newDescription });
+
+    const getAfter = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const afterData = await getAfter.json();
+    expect(afterData[0].description, 'La edición no debe ser permitida para un cargo Condonado').toBe(originalDescription);
+  });
+
+  // 16. Should allow edit of Disputed charge
+  test('CP-CH-16 - Debe permitir la edición de un cargo en Disputa', async () => {
+    await sharedPage.goto('/admin/billing/charges');
+    const row = await findTableRow(sharedPage, { column: 'Status', value: 'Disputed' });
+    await expect(
+      row.getByRole('link', { name: 'Edit' }).or(row.getByRole('button', { name: 'Edit' })),
+      'El botón o enlace Editar DEBE ser visible para un cargo en Disputa en la tabla'
+    ).toBeVisible();
+
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Disputed' });
+    await expect(sharedPage.getByRole('heading', { name: 'Charge Details' })).toBeVisible();
+    await expect(
+      sharedPage.getByRole('button', { name: 'Edit Charge' }).or(sharedPage.getByRole('link', { name: 'Edit Charge' })),
+      'El botón Editar Cargo DEBE ser visible en la vista de detalles para un cargo en Disputa'
+    ).toBeVisible();
+
+    const chargeId = (await sharedPage.url()).split('/').pop();
+    debugLog('ChargeId', chargeId);
+    expect(chargeId, 'El ID del cargo debe estar definido para un cargo en Disputa').toBeDefined();
+
+    // Obtener descripción original
+    const getBefore = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const beforeData = await getBefore.json();
+    const originalDescription = beforeData[0]?.description;
+
+    const newDescription = 'Description changed via API';
+    await apiPatch(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`, { description: newDescription });
+
+    const getAfter = await apiGet(sharedPage, `/rest/v1/charges?id=eq.${chargeId}`);
+    const afterData = await getAfter.json();
+    expect(afterData[0].description, 'La edición debe ser permitida para un cargo en Disputa').toBe(newDescription);
+  });
+});
+</file>
+
+<file path="e2e/tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js">
+const { test, expect } = require('@playwright/test');
+const { loginViaUI } = require('../../utils/auth');
+const { ClassroomPage } = require('../../pages/ClassroomPage');
+
+test.describe.configure({ mode: 'serial' });
+
+test.describe('CP-CLS: Classroom CRUD - Flujo Principal', {
+  tag: '@classroom @cp-cls',
+}, () => {
+
+  let sharedPage;
+  let classroomId;
+
+  test.beforeAll(async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    sharedPage = await ctx.newPage();
+    await loginViaUI(sharedPage);
+  });
+
+  test('CP-CLS-01: Crear aula con campos obligatorios y completos', async () => {
+    const page = sharedPage;
+    const data = {
+      name: 'QA-E2E-' + Date.now(),
+      code: 'QA-' + Date.now(),
+      level: 'Pre-Kindergarten',
+      size: 800,
+    };
+
+    await test.step('Navegar a formulario de crear aula', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.gotoNew();
+    });
+
+    await test.step('Llenar campos obligatorios y crear', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.selectFirstAvailableCampus();
+      await cls.fillBasicInfo({
+        name: data.name,
+        code: data.code,
+        level: data.level,
+        size: data.size,
+      });
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-01-form.png', fullPage: true });
+      await cls.clickCreate();
+      classroomId = await cls.expectSuccessMessage(data.name);
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-01-created.png', fullPage: true });
+    });
+
+    await test.step('Verificar aula en listado', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.gotoList();
+
+      const hasTable = await page.locator('table').isVisible({ timeout: 10000 }).catch(() => false);
+      const hasCards = await page.locator('[class*="card"]:has(a[href*="/classrooms/"])').count().catch(() => 0);
+      expect(hasTable || hasCards > 0).toBeTruthy();
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-01-list.png', fullPage: true });
+    });
+  });
+
+  test('CP-CLS-02: Editar aula existente', async () => {
+    const page = sharedPage;
+    const updatedName = 'QA-Edit-' + Date.now();
+
+    await test.step('Navegar a edicion del aula', async () => {
+      const cls = new ClassroomPage(page);
+      if (!classroomId) {
+        console.log('  → WARN: No classroom ID from CP-CLS-01, skipping');
+        test.skip();
+        return;
+      }
+      await cls.gotoEdit(classroomId);
+    });
+
+    await test.step('Modificar nombre y guardar', async () => {
+      const cls = new ClassroomPage(page);
+      const nameField = cls._getField('Classroom Name *');
+      if (nameField) {
+        await nameField.fill(updatedName);
+      }
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-02-editing.png', fullPage: true });
+      await cls.clickUpdate();
+      await cls.expectSuccessMessage();
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-02-saved.png', fullPage: true });
+    });
+  });
+
+  test('CP-CLS-03: Listado de aulas y columnas visibles', async () => {
+    const page = sharedPage;
+
+    await test.step('Navegar al listado de aulas', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.gotoList();
+
+      const hasTable = await page.locator('table').isVisible({ timeout: 10000 }).catch(() => false);
+      const hasCards = await page.locator('[class*="card"]:has(a[href*="/classrooms/"])').count().catch(() => 0);
+      const hasClassroomLinks = await page.locator('a[href*="/classrooms/"]').count().catch(() => 0);
+
+      console.log(`  → Classroom list: table=${hasTable}, cards=${hasCards}, links=${hasClassroomLinks}`);
+      expect(hasTable || hasCards > 0 || hasClassroomLinks > 0).toBeTruthy();
+
+      if (hasTable) {
+        const headers = await page.locator('table th').allTextContents();
+        console.log('  → Columnas:', headers.join(', '));
+      }
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-03-list.png', fullPage: true });
+    });
+  });
+
+  test('CP-CLS-04: Cambiar estado del aula (Active → Inactive → Active)', async () => {
+    const page = sharedPage;
+
+    await test.step('Crear aula para testing de estado', async () => {
+      const cls = new ClassroomPage(page);
+      const clsName = 'QA-Status-' + Date.now();
+      await cls.gotoNew();
+      await cls.selectFirstAvailableCampus();
+      await cls.fillBasicInfo({
+        name: clsName,
+        code: 'ST-' + Date.now(),
+        level: 'Pre-Kindergarten',
+        size: 600,
+      });
+      await cls.clickCreate();
+      classroomId = await cls.expectSuccessMessage(clsName);
+    });
+
+    await test.step('Cambiar estado: Active → Inactive → Active', async () => {
+      if (!classroomId) {
+        console.log('  → WARN: No classroom ID, skipping status change');
+        test.skip();
+        return;
+      }
+
+      const cls = new ClassroomPage(page);
+      for (const status of ['Inactive', 'Active']) {
+        await cls.gotoEdit(classroomId);
+        const statusField = cls._getField('Status');
+        if (statusField) {
+          await statusField.selectOption(status);
+        }
+        await cls.clickUpdate();
+        await cls.expectSuccessMessage();
+        console.log(`  → Status changed to: ${status}`);
+
+        await page.screenshot({ path: `evidence/screenshots/cp-cls-04-status-${status.toLowerCase()}.png`, fullPage: true });
+      }
+    });
+  });
+
+  test('CP-CLS-05: Validación de campos requeridos', async () => {
+    const page = sharedPage;
+
+    await test.step('Navegar a formulario vacío', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.gotoNew();
+    });
+
+    await test.step('Intentar crear sin campos obligatorios', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.clickCreate();
+      await cls.expectValidationError();
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-05-validation.png', fullPage: true });
+    });
+  });
+
+  test('CP-CLS-06: Configurar horarios y amenities', async () => {
+    const page = sharedPage;
+    const data = {
+      name: 'QA-Amenities-' + Date.now(),
+      code: 'AM-' + Date.now(),
+      level: 'Pre-Kindergarten',
+      size: 700,
+    };
+
+    await test.step('Crear aula con horarios y amenities', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.gotoNew();
+      await cls.selectFirstAvailableCampus();
+
+      await cls.fillBasicInfo({
+        name: data.name,
+        code: data.code,
+        level: data.level,
+        size: data.size,
+      });
+
+      await cls.setOperatingHours(0, { enabled: true, start: '08:00', end: '16:00' });
+      await cls.setOperatingHours(1, { enabled: true, start: '08:00', end: '16:00' });
+
+      await cls.toggleAmenity('Air Conditioning', true);
+      await cls.toggleAmenity('Playground Access', true);
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-06-configured.png', fullPage: true });
+      await cls.clickCreate();
+      await cls.expectSuccessMessage(data.name);
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-06-created.png', fullPage: true });
+    });
+  });
+
+  test('CP-CLS-07: Asignar ratio de personal', async () => {
+    const page = sharedPage;
+    const data = {
+      name: 'QA-Ratio-' + Date.now(),
+      code: 'RT-' + Date.now(),
+      level: 'Pre-Kindergarten',
+      size: 600,
+    };
+
+    await test.step('Crear aula y verificar columna staff en listado', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.gotoNew();
+      await cls.selectFirstAvailableCampus();
+
+      await cls.fillBasicInfo({
+        name: data.name,
+        code: data.code,
+        level: data.level,
+        size: data.size,
+      });
+
+      await cls.clickCreate();
+      await cls.expectSuccessMessage(data.name);
+    });
+
+    await test.step('Verificar columna Staff/Teachers en listado', async () => {
+      const cls = new ClassroomPage(page);
+      await cls.gotoList();
+
+      const hasTable = await page.locator('table').isVisible({ timeout: 10000 }).catch(() => false);
+      if (hasTable) {
+        const headers = await page.locator('table th').allTextContents();
+        const hasStaffCol = headers.some(h => h.toLowerCase().includes('teacher') || h.toLowerCase().includes('staff'));
+        console.log('  → Columna Staff/Teachers:', hasStaffCol ? 'visible' : 'no visible');
+      }
+
+      await page.screenshot({ path: 'evidence/screenshots/cp-cls-07-staff-column.png', fullPage: true });
+    });
+  });
+});
+</file>
+
+<file path="e2e/tests/classrooms/CP-INSPECT-LEVELS.spec.js">
+const { test, expect } = require('@playwright/test');
+const { loginAsAdmin } = require('../../shared/auth');
+
+test('Inspect Level select options', async ({ page }) => {
+  await loginAsAdmin(page);
+  await page.goto('/admin/classrooms/new');
+  await page.waitForFunction(() => !document.body.innerText.includes('Loading'), { timeout: 60000 });
+
+  const selects = await page.locator('select').all();
+  console.log(`Found ${selects.length} select elements`);
+
+  for (let i = 0; i < selects.length; i++) {
+    const options = await selects[i].locator('option').allTextContents();
+    console.log(`Select #${i}: ${JSON.stringify(options)}`);
+  }
+});
+</file>
+
+<file path="e2e/tests/families/issue-524.spec.ts">
+// e2e/family-address.spec.ts
+import { test, expect, BrowserContext, Page } from '@playwright/test';
+import {
+  clickTableAction,
+  getModal,
+  getFormFieldByLabel,
+} from '../utils/helpers';
+import { waitForResponse } from '../utils/api';
+import { loginViaUI } from '../utils/auth';
+
+test.describe('Family Address', () => {
+  let sharedContext: BrowserContext;
+  let sharedPage: Page;
+
+  // -------------------------------------------------------------------------
+  // HELPERS INTERNOS PARA EVITAR REPETICIÓN
+  // -------------------------------------------------------------------------
+
+  /**
+   * Obtiene todos los campos del formulario de dirección y verifica que existan.
+   * Retorna un objeto con los campos.
+   */
+  async function getAddressFields(page: Page) {
+    const address = getFormFieldByLabel(page, 'Address');
+    const city = getFormFieldByLabel(page, 'City');
+    const state = getFormFieldByLabel(page, 'State');
+    const postal = getFormFieldByLabel(page, 'Postal Code');
+    const country = getFormFieldByLabel(page, 'Country');
+
+    expect(address, 'El campo "Street address" debe existir').not.toBeNull();
+    expect(city, 'El campo "City" debe existir').not.toBeNull();
+    expect(state, 'El campo "State" debe existir').not.toBeNull();
+    expect(postal, 'El campo "Postal Code" debe existir').not.toBeNull();
+    expect(country, 'El campo "Country" debe existir').not.toBeNull();
+
+    return { address: address!, city: city!, state: state!, postal: postal!, country: country! };
+  }
+
+  /**
+   * Rellena los campos del formulario con los datos proporcionados (objeto parcial).
+   * Ejemplo: fillAddressFields(page, { address: 'Calle 123', city: 'Madrid' });
+   */
+  async function fillAddressFields(
+    page: Page,
+    data: Partial<{
+      address: string;
+      city: string;
+      state: string;
+      postal: string;
+      country: string;
+    }>
+  ) {
+    const fields = await getAddressFields(page);
+    if (data.address !== undefined) await fields.address.fill(data.address);
+    if (data.city !== undefined) await fields.city.fill(data.city);
+    if (data.state !== undefined) await fields.state.fill(data.state);
+    if (data.postal !== undefined) await fields.postal.fill(data.postal);
+    if (data.country !== undefined) await fields.country.selectOption(data.country);
+  }
+
+  /**
+   * Limpia todos los campos del formulario (rellena con cadena vacía).
+   */
+  async function clearAddressFields(page: Page) {
+    await fillAddressFields(page, {
+      address: '',
+      city: '',
+      state: '',
+      postal: '',
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // CONFIGURACIÓN DE LA SUITE
+  // -------------------------------------------------------------------------
+
+  test.beforeAll(async ({ browser }) => {
+    sharedContext = await browser.newContext();
+    sharedPage = await sharedContext.newPage();
+    await loginViaUI(sharedPage);
+  });
+
+  test.afterAll(async () => {
+    await sharedContext.close();
+  });
+
+  // -------------------------------------------------------------------------
+  // PRUEBAS
+  // -------------------------------------------------------------------------
+
+  test('CP-FAM-01 - Verificar campos del modal de editar dirección', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+    await sharedPage.getByRole('button', { name: 'Edit Address' }).first().click();
+
+    const modal = getModal(sharedPage);
+    const fields = await getAddressFields(sharedPage);
+    await expect(modal.getByRole('button', { name: /Cancel|Back/ }), 'El botón "Cancel" debe estar visible').toBeVisible();
+    await expect(modal.getByRole('button', { name: 'Save Address' }), 'El botón "Save Address" debe estar visible').toBeVisible();
+  });
+
+  test('CP-FAM-02 - Editar dirección de familia correctamente y persistir tras recarga', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+    await sharedPage.getByRole('button', { name: 'Edit Address' }).first().click();
+
+    await fillAddressFields(sharedPage, {
+      address: '742 Evergreen Terrace',
+      city: 'Springfield',
+      state: 'Oregon',
+      postal: '97401',
+      country: 'United States',
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/families', 'PATCH');
+    await sharedPage.getByRole('button', { name: 'Save Address' }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe responder con éxito (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.address, 'El campo "address" debe coincidir con lo enviado').toBe('742 Evergreen Terrace');
+    expect(payload.city, 'El campo "city" debe coincidir con lo enviado').toBe('Springfield');
+    expect(payload.state, 'El campo "state" debe coincidir con lo enviado').toBe('Oregon');
+    expect(payload.postal_code, 'El campo "postal_code" debe coincidir con lo enviado').toBe('97401');
+    expect(payload.country, 'El campo "country" debe coincidir con lo enviado').toBe('United States');
+
+    await expect(sharedPage.getByText('742 Evergreen Terrace'), 'La dirección debe mostrarse en la vista de detalle').toBeVisible();
+    await expect(sharedPage.getByText('Springfield, Oregon 97401'), 'La ciudad, estado y código postal deben mostrarse formateados').toBeVisible();
+
+    await sharedPage.reload();
+    await expect(sharedPage.getByText('742 Evergreen Terrace'), 'Tras recargar, la dirección debe seguir visible').toBeVisible();
+    await expect(sharedPage.getByText('Springfield, Oregon 97401'), 'Tras recargar, la ciudad/estado/CP deben seguir visibles').toBeVisible();
+  });
+
+  test('CP-FAM-03 - Limpiar todos los campos de dirección de la familia', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+    await sharedPage.getByRole('button', { name: 'Edit Address' }).first().click();
+
+    await clearAddressFields(sharedPage);
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/families', 'PATCH');
+    await sharedPage.getByRole('button', { name: 'Save Address' }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe responder con éxito (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.address, 'El campo "address" debe enviarse vacío').toBeFalsy();
+    expect(payload.city, 'El campo "city" debe enviarse vacío').toBeFalsy();
+    expect(payload.state, 'El campo "state" debe enviarse vacío').toBeFalsy();
+    expect(payload.postal_code, 'El campo "postal_code" debe enviarse vacío').toBeFalsy();
+
+    const responseBody = await response.json();
+    expect(responseBody.address).toBeFalsy();
+    expect(responseBody.city).toBeFalsy();
+    expect(responseBody.state).toBeFalsy();
+    expect(responseBody.postal_code).toBeFalsy();
+
+    await expect(sharedPage.getByText('No address'), 'La UI debe mostrar "No address" cuando todos los campos están vacíos').toBeVisible();
+  });
+
+  test('CP-FAM-04 - Enviar valores con solo espacios en blanco', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+    await sharedPage.getByRole('button', { name: 'Edit Address' }).first().click();
+
+    const whitespace = '   ';
+    await fillAddressFields(sharedPage, {
+      address: whitespace,
+      city: whitespace,
+      state: whitespace,
+      postal: whitespace,
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/families', 'PATCH');
+    await sharedPage.getByRole('button', { name: 'Save Address' }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe responder con éxito (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    // Asumimos que el backend trimea los espacios
+    expect(payload.address, 'El backend debería trimear los espacios y guardar cadena vacía').toBeFalsy();
+    expect(payload.city, 'El backend debería trimear los espacios y guardar cadena vacía').toBeFalsy();
+    expect(payload.state, 'El backend debería trimear los espacios y guardar cadena vacía').toBeFalsy();
+    expect(payload.postal_code, 'El backend debería trimear los espacios y guardar cadena vacía').toBeFalsy();
+
+    const responseBody = await response.json();
+    expect(responseBody.address).toBeFalsy();
+    expect(responseBody.city).toBeFalsy();
+    expect(responseBody.state).toBeFalsy();
+    expect(responseBody.postal_code).toBeFalsy();
+
+    await expect(sharedPage.getByText('No address'), 'La UI debe mostrar "No address" si todos los campos quedan vacíos').toBeVisible();
+  });
+
+  test('CP-FAM-05 - Caracteres especiales en ciudad y estado', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+    await sharedPage.getByRole('button', { name: 'Edit Address' }).first().click();
+
+    const specialCity = 'São Paulo #-.';
+    const specialState = 'Ñuñoa-123.';
+    await fillAddressFields(sharedPage, {
+      address: 'Some street',
+      city: specialCity,
+      state: specialState,
+      postal: '12345',
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/families', 'PATCH');
+    await sharedPage.getByRole('button', { name: 'Save Address' }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe aceptar caracteres especiales (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.city, 'La ciudad con caracteres especiales debe guardarse correctamente').toBe(specialCity);
+    expect(payload.state, 'El estado con caracteres especiales debe guardarse correctamente').toBe(specialState);
+
+    await expect(sharedPage.getByText(specialCity), 'La ciudad con caracteres especiales debe mostrarse en la UI').toBeVisible();
+    await expect(sharedPage.getByText(specialState), 'El estado con caracteres especiales debe mostrarse en la UI').toBeVisible();
+  });
+
+  test('CP-FAM-06 - Código postal alfanumérico (formato UK)', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+    await sharedPage.getByRole('button', { name: 'Edit Address' }).first().click();
+
+    const ukPostal = 'E1 5AB';
+    await fillAddressFields(sharedPage, {
+      address: '10 Downing Street',
+      city: 'London',
+      state: 'Greater London',
+      postal: ukPostal,
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/families', 'PATCH');
+    await sharedPage.getByRole('button', { name: 'Save Address' }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe aceptar código postal alfanumérico (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.postal_code, 'El código postal alfanumérico debe guardarse sin alteraciones').toBe(ukPostal);
+
+    await expect(sharedPage.getByText(ukPostal), 'El código postal alfanumérico debe mostrarse en la UI').toBeVisible();
+  });
+
+  test('CP-FAM-07 - Dirección larga (500 caracteres)', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+    await sharedPage.getByRole('button', { name: 'Edit Address' }).first().click();
+
+    const longAddress = 'a'.repeat(500);
+    await fillAddressFields(sharedPage, {
+      address: longAddress,
+      city: 'City',
+      state: 'State',
+      postal: '12345',
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/families', 'PATCH');
+    await sharedPage.getByRole('button', { name: 'Save Address' }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El backend debe aceptar 500 caracteres (o rechazar con 400 si hay límite)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.address.length, 'La longitud del address debe ser 500 (o el límite que imponga el backend)').toBe(500);
+
+    await expect(sharedPage.getByText(longAddress.substring(0, 100)), 'El address largo debe aparecer en la UI (al menos parcialmente)').toBeVisible();
+  });
+
+  test('CP-FAM-08 - Inyección XSS en campos de dirección', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+    await sharedPage.getByRole('button', { name: 'Edit Address' }).first().click();
+
+    const xssPayload = '<script>alert("XSS")</script>';
+    await fillAddressFields(sharedPage, {
+      address: xssPayload,
+      city: 'City',
+      state: 'State',
+      postal: '12345',
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/families', 'PATCH');
+    await sharedPage.getByRole('button', { name: 'Save Address' }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe completarse (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.address, 'El payload debe contener el script (escapado o como texto)').toContain('script');
+
+    const addressDisplay = sharedPage.getByText('<script>', { exact: false });
+    await expect(addressDisplay, 'El script debe mostrarse como texto escapado o literal, no ejecutado').toBeVisible();
+  });
+});
+
+// =============================================================================
+// TEST DESCRIBE PARA FAMILY MEMBER - MISMO CONJUNTO DE PRUEBAS DE DIRECCIÓN
+// =============================================================================
+
+test.describe('Family Member', () => {
+  let sharedContext: BrowserContext;
+  let sharedPage: Page;
+
+  // -------------------------------------------------------------------------
+  // HELPERS INTERNOS
+  // -------------------------------------------------------------------------
+
+  /**
+   * Abre el modal de edición del primer miembro de la familia (haciendo clic
+   * en el botón con icono de lápiz) y retorna la página.
+   * Asume que ya estamos en la vista de detalle de una familia.
+   */
+  async function openFirstMemberEditModal(page: Page): Promise<void> {
+    // Localizar el primer botón de editar (icono de lápiz) dentro de la sección de miembros
+    await page.getByRole('button').filter({ hasText: /^$/ }).nth(1).click();
+
+    // Esperar que el modal esté visible
+    const modal = getModal(page);
+    await expect(modal).toBeVisible();
+  }
+
+  /**
+   * Obtiene todos los campos del formulario de dirección dentro del modal de
+   * edición de un miembro. Asume que los labels son los mismos que en familia.
+   */
+  async function getMemberAddressFields(page: Page) {
+    const address = getFormFieldByLabel(page, 'Address', true);
+    const city = getFormFieldByLabel(page, 'City', true);
+    const state = getFormFieldByLabel(page, 'State', true);
+    const postal = getFormFieldByLabel(page, 'Postal Code', true);
+    const country = getFormFieldByLabel(page, 'Country', true);
+
+    expect(address, 'El campo "Address" debe existir en el modal del miembro').not.toBeNull();
+    expect(city, 'El campo "City" debe existir en el modal del miembro').not.toBeNull();
+    expect(state, 'El campo "State" debe existir en el modal del miembro').not.toBeNull();
+    expect(postal, 'El campo "Postal Code" debe existir en el modal del miembro').not.toBeNull();
+    expect(country, 'El campo "Country" debe existir en el modal del miembro').not.toBeNull();
+
+    return { address: address!, city: city!, state: state!, postal: postal!, country: country! };
+  }
+  ''
+  /**
+   * Rellena los campos de dirección en el modal del miembro.
+   */
+  async function fillMemberAddressFields(
+    page: Page,
+    data: Partial<{
+      address: string;
+      city: string;
+      state: string;
+      postal: string;
+      country: string;
+    }>
+  ) {
+    const fields = await getMemberAddressFields(page);
+    if (data.address !== undefined) await fields.address.fill(data.address);
+    if (data.city !== undefined) await fields.city.fill(data.city);
+    if (data.state !== undefined) await fields.state.fill(data.state);
+    if (data.postal !== undefined) await fields.postal.fill(data.postal);
+    if (data.country !== undefined) await fields.country.selectOption(data.country);
+  }
+
+  /**
+   * Limpia todos los campos de dirección en el modal del miembro.
+   */
+  async function clearMemberAddressFields(page: Page) {
+    await fillMemberAddressFields(page, {
+      address: '',
+      city: '',
+      state: '',
+      postal: '',
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // CONFIGURACIÓN DE LA SUITE
+  // -------------------------------------------------------------------------
+
+  test.beforeAll(async ({ browser }) => {
+    sharedContext = await browser.newContext();
+    sharedPage = await sharedContext.newPage();
+    await loginViaUI(sharedPage);
+  });
+
+  test.afterAll(async () => {
+    await sharedContext.close();
+  });
+
+  // -------------------------------------------------------------------------
+  // PRUEBAS - REPLICAN EXACTAMENTE LAS DE FAMILY ADDRESS PERO PARA MIEMBRO
+  // -------------------------------------------------------------------------
+
+  test('CP-FAM-09 - Verificar campos de dirección en el modal de editar miembro', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    const modal = getModal(sharedPage);
+    const fields = await getMemberAddressFields(sharedPage);
+    await expect(modal.getByRole('button', { name: /Cancel|Back/ }), 'El botón "Cancel" debe estar visible').toBeVisible();
+    await expect(modal.getByRole('button', { name: /Save|Update/ }), 'El botón de guardar debe estar visible').toBeVisible();
+  });
+
+  test('CP-FAM-10 - Editar dirección de miembro correctamente y persistir tras recarga', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    await fillMemberAddressFields(sharedPage, {
+      address: '742 Evergreen Terrace',
+      city: 'Springfield',
+      state: 'Oregon',
+      postal: '97401',
+      country: 'United States',
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/family_members', 'PATCH');
+    await sharedPage.getByRole('button', { name: /Save|Update/ }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe responder con éxito (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.address, 'El campo "address" debe coincidir con lo enviado').toBe('742 Evergreen Terrace');
+    expect(payload.city, 'El campo "city" debe coincidir con lo enviado').toBe('Springfield');
+    expect(payload.state, 'El campo "state" debe coincidir con lo enviado').toBe('Oregon');
+    expect(payload.postal_code, 'El campo "postal_code" debe coincidir con lo enviado').toBe('97401');
+    expect(payload.country, 'El campo "country" debe coincidir con lo enviado').toBe('United States');
+
+    // Verificar que la dirección se muestra en la vista de detalle (asumiendo que se muestra)
+    await expect(sharedPage.getByText('742 Evergreen Terrace'), 'La dirección debe mostrarse en la vista de detalle').toBeVisible();
+    await expect(sharedPage.getByText('Springfield, Oregon 97401'), 'La ciudad, estado y código postal deben mostrarse formateados').toBeVisible();
+
+    await sharedPage.reload();
+    await expect(sharedPage.getByText('742 Evergreen Terrace'), 'Tras recargar, la dirección debe seguir visible').toBeVisible();
+    await expect(sharedPage.getByText('Springfield, Oregon 97401'), 'Tras recargar, la ciudad/estado/CP deben seguir visibles').toBeVisible();
+  });
+
+  test('CP-FAM-11 - Limpiar todos los campos de dirección del miembro', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    await clearMemberAddressFields(sharedPage);
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/family_members', 'PATCH');
+    await sharedPage.getByRole('button', { name: /Save|Update/ }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe responder con éxito (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.address, 'El campo "address" debe enviarse vacío').toBeFalsy();
+    expect(payload.city, 'El campo "city" debe enviarse vacío').toBeFalsy();
+    expect(payload.state, 'El campo "state" debe enviarse vacío').toBeFalsy();
+    expect(payload.postal_code, 'El campo "postal_code" debe enviarse vacío').toBeFalsy();
+
+    const responseBody = await response.json();
+    expect(responseBody.address).toBeFalsy();
+    expect(responseBody.city).toBeFalsy();
+    expect(responseBody.state).toBeFalsy();
+    expect(responseBody.postal_code).toBeFalsy();
+
+    await expect(sharedPage.getByText('No address'), 'La UI debe mostrar "No address" cuando todos los campos están vacíos').toBeVisible();
+  });
+
+  test('CP-FAM-12 - Enviar valores con solo espacios en blanco en miembro', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    const whitespace = '   ';
+    await fillMemberAddressFields(sharedPage, {
+      address: whitespace,
+      city: whitespace,
+      state: whitespace,
+      postal: whitespace,
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/family_members', 'PATCH');
+    await sharedPage.getByRole('button', { name: /Save|Update/ }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe responder con éxito (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    // Asumimos que el backend trimea los espacios
+    expect(payload.address, 'El backend debería trimear los espacios y guardar cadena vacía').toBeFalsy();
+    expect(payload.city, 'El backend debería trimear los espacios y guardar cadena vacía').toBeFalsy();
+    expect(payload.state, 'El backend debería trimear los espacios y guardar cadena vacía').toBeFalsy();
+    expect(payload.postal_code, 'El backend debería trimear los espacios y guardar cadena vacía').toBeFalsy();
+
+    const responseBody = await response.json();
+    expect(responseBody.address).toBeFalsy();
+    expect(responseBody.city).toBeFalsy();
+    expect(responseBody.state).toBeFalsy();
+    expect(responseBody.postal_code).toBeFalsy();
+
+    await expect(sharedPage.getByText('No address'), 'La UI debe mostrar "No address" si todos los campos quedan vacíos').toBeVisible();
+  });
+
+  test('CP-FAM-13 - Caracteres especiales en ciudad y estado de miembro', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    const specialCity = 'São Paulo #-.';
+    const specialState = 'Ñuñoa-123.';
+    await fillMemberAddressFields(sharedPage, {
+      address: 'Some street',
+      city: specialCity,
+      state: specialState,
+      postal: '12345',
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/family_members', 'PATCH');
+    await sharedPage.getByRole('button', { name: /Save|Update/ }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe aceptar caracteres especiales (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.city, 'La ciudad con caracteres especiales debe guardarse correctamente').toBe(specialCity);
+    expect(payload.state, 'El estado con caracteres especiales debe guardarse correctamente').toBe(specialState);
+
+    await expect(sharedPage.getByText(specialCity), 'La ciudad con caracteres especiales debe mostrarse en la UI').toBeVisible();
+    await expect(sharedPage.getByText(specialState), 'El estado con caracteres especiales debe mostrarse en la UI').toBeVisible();
+  });
+
+  test('CP-FAM-14 - Código postal alfanumérico (formato UK) en miembro', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    const ukPostal = 'E1 5AB';
+    await fillMemberAddressFields(sharedPage, {
+      address: '10 Downing Street',
+      city: 'London',
+      state: 'Greater London',
+      postal: ukPostal,
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/family_members', 'PATCH');
+    await sharedPage.getByRole('button', { name: /Save|Update/ }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe aceptar código postal alfanumérico (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.postal_code, 'El código postal alfanumérico debe guardarse sin alteraciones').toBe(ukPostal);
+
+    await expect(sharedPage.getByText(ukPostal), 'El código postal alfanumérico debe mostrarse en la UI').toBeVisible();
+  });
+
+  test('CP-FAM-15 - Dirección larga (500 caracteres) en miembro', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    const longAddress = 'a'.repeat(500);
+    await fillMemberAddressFields(sharedPage, {
+      address: longAddress,
+      city: 'City',
+      state: 'State',
+      postal: '12345',
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/family_members', 'PATCH');
+    await sharedPage.getByRole('button', { name: /Save|Update/ }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El backend debe aceptar 500 caracteres (o rechazar con 400 si hay límite)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.address.length, 'La longitud del address debe ser 500 (o el límite que imponga el backend)').toBe(500);
+
+    await expect(sharedPage.getByText(longAddress.substring(0, 100)), 'El address largo debe aparecer en la UI (al menos parcialmente)').toBeVisible();
+  });
+
+  test('CP-FAM-16 - Inyección XSS en campos de dirección de miembro', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    await openFirstMemberEditModal(sharedPage);
+
+    const xssPayload = '<script>alert("XSS")</script>';
+    await fillMemberAddressFields(sharedPage, {
+      address: xssPayload,
+      city: 'City',
+      state: 'State',
+      postal: '12345',
+    });
+
+    const patchPromise = waitForResponse(sharedPage, '/rest/v1/family_members', 'PATCH');
+    await sharedPage.getByRole('button', { name: /Save|Update/ }).click();
+
+    const response = await patchPromise;
+    expect(response.status(), 'El PATCH debe completarse (código < 400)').toBeLessThan(400);
+
+    const payload = response.request().postDataJSON();
+    expect(payload.address, 'El payload debe contener el script (escapado o como texto)').toContain('script');
+
+    const addressDisplay = sharedPage.getByText('<script>', { exact: false });
+    await expect(addressDisplay, 'El script debe mostrarse como texto escapado o literal, no ejecutado').toBeVisible();
+  });
+
+  // -------------------------------------------------------------------------
+  // TEST ADICIONAL: CP-FAM-17 - ABRIR MODAL DE AGREGAR MIEMBRO Y VERIFICAR CAMPOS
+  // -------------------------------------------------------------------------
+
+  test('CP-FAM-17 - Abrir modal de agregar miembro y verificar campos de dirección y botones', async () => {
+    await sharedPage.goto('/admin/families');
+    await clickTableAction(sharedPage, 'View', { column: 'Status', value: 'Active' });
+
+    // Hacer clic en el botón "Add Member" (asumimos que existe con ese texto)
+    const addButton = sharedPage.getByRole('button', { name: 'Add Member' });
+    await expect(addButton).toBeVisible();
+    await addButton.click();
+
+    // Verificar que se abre el modal
+    const modal = getModal(sharedPage);
+    await expect(modal).toBeVisible();
+
+    // Verificar que los campos de dirección existen
+    const addressFields = await getMemberAddressFields(sharedPage);
+    await expect(addressFields.address).toBeVisible();
+    await expect(addressFields.city).toBeVisible();
+    await expect(addressFields.state).toBeVisible();
+    await expect(addressFields.postal).toBeVisible();
+    await expect(addressFields.country).toBeVisible();
+
+    // Verificar el campo Email (adicional, como se pidió)
+    const emailField = getFormFieldByLabel(sharedPage, 'Email Address');
+    expect(emailField, 'El campo "Email Address" debe existir').not.toBeNull();
+    await emailField!.fill('new@parent.com');
+
+    // Verificar visibilidad de los botones Cancel y Save
+    await expect(modal.getByRole('button', { name: /Cancel|Back/ }), 'El botón "Cancel" debe estar visible').toBeVisible();
+    await expect(modal.getByRole('button', { name: /Save|Add/ }), 'El botón de guardar debe estar visible').toBeVisible();
+  });
+});
+</file>
+
+<file path="e2e/tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js">
+const { test, expect } = require('@playwright/test');
+const { loginViaUI } = require('../../utils/auth');
+const { OnboardingPage } = require('../../pages/OnboardingPage');
+
+const SCHOOL_ID = 'f14b95b1-72d7-4970-9784-df60ad9a02ee';
+const CAMPUS_ID = 'a4b0ec15-22e3-436f-ab9f-86057984e52f';
+
+test.describe('CP-ONB: Onboarding del Nino (flujo E2E del wizard)', {
+  tag: '@onboarding @cp-onb',
+}, () => {
+  let sharedPage;
+
+  test.beforeAll(async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    sharedPage = await ctx.newPage();
+    await loginViaUI(sharedPage);
+  });
+
+  function makeChildOpts(overrides = {}) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6 - Math.floor(Math.random() * 6));
+    const defaultBirth = d.toISOString().split('T')[0];
+    const letters = 'ABCDEFGHJKLMNPRSTVWXYZ';
+    let suffix = '';
+    for (let i = 0; i < 4; i++) suffix += letters[Math.floor(Math.random() * letters.length)];
+    return { firstName: 'Auto', lastName: 'Onb' + suffix, birthDate: defaultBirth, gender: 'Male', ...overrides };
+  }
+
+  test('CP-ONB-01: Registro completo del nino via wizard de 4 pasos', async () => {
+    const onb = new OnboardingPage(sharedPage);
+    await onb.goto();
+    await onb.completeWizard({ childData: makeChildOpts({ firstName: 'Full' }) });
+
+    await sharedPage.screenshot({ path: 'evidence/screenshots/cp-onb-01-complete.png', fullPage: true });
+
+    const ok = await onb.isSuccessVisible();
+    expect(ok, 'El registro debe redirigir al detalle del nino').toBeTruthy();
+    expect(sharedPage.url(), 'Debe quedar en /admin/children/{id}').toContain('/admin/children/');
+    const status = await onb.getChildStatus();
+    console.log('[CP-ONB-01 INFO] estado del nino tras onboarding:', status);
+    expect(['Active', 'active'].includes(status), 'El nino debe quedar registrado (estado activo tras onboarding)').toBeTruthy();
+  });
+
+  test('CP-ONB-02: Registro con solo campos obligatorios', async () => {
+    const onb = new OnboardingPage(sharedPage);
+    await onb.goto();
+    await onb.completeWizard({ childData: makeChildOpts({ firstName: 'Min' }) });
+
+    await sharedPage.screenshot({ path: 'evidence/screenshots/cp-onb-02-minimal.png', fullPage: true });
+    const ok = await onb.isSuccessVisible();
+    expect(ok, 'El registro minimo debe completarse').toBeTruthy();
+  });
+
+  test('CP-ONB-03: Rechazo de registro duplicado (mismo nombre y fecha)', async () => {
+    const child = makeChildOpts({ firstName: 'Dup' });
+    const onb = new OnboardingPage(sharedPage);
+
+    // Primer registro
+    await onb.goto();
+    await onb.fillStep1({ firstName: child.firstName, lastName: child.lastName, birthDate: child.birthDate, gender: child.gender });
+    await onb.goNextStep1();
+    await onb.fillStep2();
+    await onb.goNextStep2();
+    await onb.goNextStep3();
+    await onb.fillStep4();
+    await onb.submit();
+    const firstOk = await onb.isSuccessVisible();
+
+    // Segundo registro con los mismos datos
+    await onb.goto();
+    await onb.fillStep1({ firstName: child.firstName, lastName: child.lastName, birthDate: child.birthDate, gender: child.gender });
+    await onb.goNextStep1();
+    await onb.fillStep2();
+    await onb.goNextStep2();
+    await onb.goNextStep3();
+    await onb.fillStep4();
+    await onb.submit();
+
+    await sharedPage.screenshot({ path: 'evidence/screenshots/cp-onb-03-duplicate.png', fullPage: true });
+    const duplicate = await onb.isDuplicateErrorVisible();
+    console.log('  -> Primer registro exitoso:', firstOk, '| Rechazo duplicado:', duplicate);
+    expect(duplicate, 'El sistema debe rechazar el registro duplicado').toBeTruthy();
+  });
+
+  test('CP-ONB-04: Acceso al wizard sin sesion redirige a login', async ({ page }) => {
+    await page.goto('/admin/children/new');
+    await page.waitForTimeout(3000);
+    await page.screenshot({ path: 'evidence/screenshots/cp-onb-04-no-auth.png', fullPage: true });
+    const onLogin = page.url().includes('/login');
+    expect(onLogin, 'Sin sesion el wizard debe redirigir a /login').toBeTruthy();
+  });
+
+  test('CP-ONB-05: Persistencia de la informacion en la base de datos', async () => {
+    const onb = new OnboardingPage(sharedPage);
+    const headers = await onb._getAuthHeaders();
+    const child = makeChildOpts({ firstName: 'Persist' });
+    const cRes = await onb._httpsReq('/rest/v1/children', 'POST',
+      Object.assign({}, headers, { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }),
+      JSON.stringify({ school_id: SCHOOL_ID, first_name: child.firstName, last_name: child.lastName, birth_date: child.birthDate, gender: child.gender, status: 'pending' }));
+    expect(cRes.status, 'POST /children debe retornar 201').toBe(201);
+    const id = cRes.json && cRes.json[0] && cRes.json[0].id;
+    expect(id, 'El nino debe obtener un id').toBeTruthy();
+
+    const got = await onb._httpsReq('/rest/v1/children?id=eq.' + id + '&select=id,first_name,last_name,status', 'GET', headers);
+    expect(got.status, 'GET /children debe retornar 200').toBe(200);
+    expect(got.json[0].first_name, 'El nombre debe persistir').toBe(child.firstName);
+    expect(got.json[0].last_name, 'El apellido debe persistir').toBe(child.lastName);
+
+    await onb._httpsReq('/rest/v1/children?id=eq.' + id, 'DELETE', headers);
+  });
+
+  test('CP-ONB-06: Validacion de ratio nino-staff y forzamiento activo', async () => {
+    const onb = new OnboardingPage(sharedPage);
+    const headers = await onb._getAuthHeaders();
+    const child = makeChildOpts({ firstName: 'Ratio' });
+    const cRes = await onb._httpsReq('/rest/v1/children', 'POST',
+      Object.assign({}, headers, { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }),
+      JSON.stringify({ school_id: SCHOOL_ID, first_name: child.firstName, last_name: child.lastName, birth_date: child.birthDate, gender: child.gender, status: 'pending' }));
+    expect(cRes.status, 'POST /children').toBe(201);
+    const childId = cRes.json[0].id;
+
+    const clsRes = await onb._httpsReq('/rest/v1/classrooms?campus_id=eq.' + CAMPUS_ID + '&select=id,classroom_name,capacity,current_enrollment', 'GET', headers);
+    const rooms = clsRes.json || [];
+    const others = rooms.filter(c => !/kinder\s*b/i.test(c.classroom_name || ''));
+    const full = others.find(c => (c.current_enrollment || 0) >= (c.capacity || 0)) || others[0] || rooms[0];
+    expect(full, 'Debe existir al menos un aula para evaluar el ratio').toBeTruthy();
+
+    const enr = await onb._httpsReq('/rest/v1/classroom_enrollments', 'POST',
+      Object.assign({}, headers, { 'Content-Type': 'application/json' }),
+      JSON.stringify({ child_id: childId, classroom_id: full.id }));
+
+    if ((full.current_enrollment || 0) >= (full.capacity || 0)) {
+      expect(enr.status, 'Inscripcion en aula llena debe ser rechazada (forzamiento activo)').not.toBe(201);
+    } else {
+      expect(enr.status, 'La inscripcion debe ser procesada coherentemente').toBeGreaterThanOrEqual(200);
+    }
+
+    if (enr.json && enr.json[0] && enr.json[0].id) {
+      await onb._httpsReq('/rest/v1/classroom_enrollments?id=eq.' + enr.json[0].id, 'DELETE', headers);
+    }
+    await onb._httpsReq('/rest/v1/children?id=eq.' + childId, 'DELETE', headers);
+  });
+
+  test('CP-ONB-07: Creacion de la familia asociada al nino', async () => {
+    const onb = new OnboardingPage(sharedPage);
+    const headers = await onb._getAuthHeaders();
+    const famCode = 'LBC' + Date.now().toString().slice(-8);
+    const fRes = await onb._httpsReq('/rest/v1/families', 'POST',
+      Object.assign({}, headers, { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }),
+      JSON.stringify({ school_id: SCHOOL_ID, family_code: famCode, family_name: 'Familia Test' }));
+    expect(fRes.status, 'POST /families debe retornar 201').toBe(201);
+    const fid = fRes.json[0].id;
+
+    const got = await onb._httpsReq('/rest/v1/families?id=eq.' + fid, 'GET', headers);
+    expect(got.json[0].family_code, 'La familia debe persistir con su codigo').toBe(famCode);
+
+    await onb._httpsReq('/rest/v1/families?id=eq.' + fid, 'DELETE', headers);
+  });
+
+  test('CP-ONB-08: Factura de onboarding y cargos 1 recurrente + 1 no recurrente', async () => {
+    const onb = new OnboardingPage(sharedPage);
+    const headers = await onb._getAuthHeaders();
+
+    const invs = await onb._httpsReq('/rest/v1/invoices?school_id=eq.' + SCHOOL_ID + '&limit=1&select=id,invoice_number', 'GET', headers);
+    expect(invs.status, 'GET /invoices debe retornar 200').toBe(200);
+    expect(invs.json.length, 'La escuela debe tener al menos una factura').toBeGreaterThan(0);
+
+    const ch = await onb._httpsReq('/rest/v1/charges?school_id=eq.' + SCHOOL_ID + '&select=charge_type&limit=1000', 'GET', headers);
+    expect(ch.status, 'GET /charges debe retornar 200').toBe(200);
+    const types = [...new Set((ch.json || []).map(c => c.charge_type).filter(Boolean))];
+    console.log('[CP-ONB-08 INFO] charge_type disponibles en la escuela:', JSON.stringify(types));
+  });
+});
+</file>
+
+<file path="e2e/tests/permissions/login-by-role.spec.ts">
+// e2e/login.spec.ts
+import { test, expect, BrowserContext, Page } from '@playwright/test';
+import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { sanitizeTitle, takeScreenshot } from '../../utils/helpers';
+
+// Cargar variables de entorno
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Contraseña común para la mayoría de los usuarios
+const COMMON_PASSWORD = process.env.TEST_USER_PASSWORD ?? '';
+
+if (!COMMON_PASSWORD) {
+  throw new Error('❌ TEST_USER_PASSWORD no está definida en el entorno');
+}
+
+// Definición de usuarios: 
+// - envKey: variable de entorno que contiene el email
+// - role: descripción del rol (se muestra en el título)
+// - shouldSucceed: true si debe acceder a /admin, false si debe ir a /unauthorized
+// - passwordEnv: (opcional) variable de entorno con la contraseña específica; si no se define, se usa COMMON_PASSWORD
+const userDefinitions = [
+  // Roles con acceso permitido
+  { envKey: 'TEST_USER_ACCOUNTANT', role: 'Accountant (Contador)', shouldSucceed: true },
+  { envKey: 'TEST_USER_RECEPCIONIST', role: 'Recepcionist (Recepcionista)', shouldSucceed: true },
+  { envKey: 'TEST_USER_SCHOOL_ADMIN', role: 'School Administrator (Administrador escuela)', shouldSucceed: true },
+  { envKey: 'TEST_USER_PRINCIPAL', role: 'Principal', shouldSucceed: true },
+  { envKey: 'TEST_USER_SUPER_ADMIN', role: 'SuperAdmin', shouldSucceed: true, passwordEnv: 'TEST_USER_SUPER_ADMIN_PASSWORD' },
+  { envKey: 'TEST_USER_ORGANIZATION_ADMIN', role: 'Organization Administrator (Administrador Organización)', shouldSucceed: true, passwordEnv: 'TEST_USER_ORGANIZATION_ADMIN_PASSWORD' },
+
+  // Roles sin acceso (deben redirigir a /unauthorized)
+  { envKey: 'TEST_USER_ASSISTANT_TEACHER', role: 'Assistant Teacher', shouldSucceed: false },
+  { envKey: 'TEST_USER_PARENT_GUARDIAN', role: 'Parent/Guardian', shouldSucceed: false },
+  { envKey: 'TEST_USER_STAFF', role: 'Staff', shouldSucceed: false },
+  { envKey: 'TEST_USER_TEACHER', role: 'Teacher', shouldSucceed: false },
+  { envKey: 'TEST_USER_CUSTOM_ROLE', role: 'Custom Role', shouldSucceed: false },
+  { envKey: 'TEST_USER_PARENT', role: 'Parent', shouldSucceed: false },
+];
+
+// Construir la lista de usuarios con email y password resueltos
+const users = userDefinitions
+  .map(def => {
+    const email = process.env[def.envKey];
+    if (!email) return null; // Si no está definido, se omite
+
+    // Determinar la contraseña
+    let password: string;
+    if (def.passwordEnv) {
+      const pwd = process.env[def.passwordEnv];
+      if (!pwd) {
+        throw new Error(`❌ La variable de entorno ${def.passwordEnv} no está definida para el usuario ${def.role}`);
+      }
+      password = pwd;
+    } else {
+      password = COMMON_PASSWORD;
+    }
+
+    return {
+      email,
+      password,
+      role: def.role,
+      shouldSucceed: def.shouldSucceed,
+    };
+  })
+  .filter((u): u is { email: string; password: string; role: string; shouldSucceed: boolean } => u !== null);
+
+if (users.length === 0) {
+  throw new Error('❌ No se encontraron usuarios definidos en el entorno. Asegúrate de definir las variables TEST_USER_*');
+}
+
+test.describe('Login de usuarios por rol', () => {
+  let context: BrowserContext;
+  let page: Page;
+
+  // Define la ruta de la carpeta de screenshots (ajústala según tu proyecto)
+  const TEST_SCREENSHOTS_DIR = 'permissions/login_by_role';
+
+  const SCREENSHOTS_DIR = path.join(__dirname, 'screenshots/' + TEST_SCREENSHOTS_DIR); // o './screenshots'
+
+  test.beforeAll(async ({ browser }) => {
+    // 🔥 Limpiar la carpeta de screenshots antes de todas las pruebas
+    if (fs.existsSync(SCREENSHOTS_DIR)) {
+      // Elimina la carpeta y todo su contenido recursivamente
+      fs.rmSync(SCREENSHOTS_DIR, { recursive: true, force: true });
+    }
+    // Crear la carpeta nuevamente (vacía) para que las próximas capturas tengan un lugar donde guardarse
+    fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+    context = await browser.newContext();
+    page = await context.newPage();
+  });
+
+  test.beforeEach(async () => {
+    await context.clearCookies();
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test.afterEach(async ({ }, testInfo) => {
+    // Tomar screenshot solo si el test falló
+    const safeTitle = sanitizeTitle(testInfo.title);
+    if (testInfo.status !== 'passed') {
+      // Sanitizar el título para usarlo como nombre de archivo
+      await takeScreenshot(page, `${TEST_SCREENSHOTS_DIR}/failure_${safeTitle}`);
+    } else
+      await takeScreenshot(page, `${TEST_SCREENSHOTS_DIR}/ok_${safeTitle}`);
+  });
+
+  test.afterAll(async () => {
+    await context.close();
+  });
+
+  async function loginAs(email: string, password: string) {
+    await page.getByRole('textbox', { name: 'Email address' }).fill(email);
+    await page.getByRole('textbox', { name: 'Password' }).fill(password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    // Esperar a que la URL cambie a /admin, /unauthorized o /login (si hay error)
+    await page.waitForURL(/\/admin|\/unauthorized|\/login/);
+
+    // Verificar si hay un toast de error
+    const errorToast = page.getByText(/Invalid login credentials|Error/i);
+    if (await errorToast.isVisible()) {
+      throw new Error(`❌ Credenciales inválidas para ${email}. Verifica que el usuario exista y la contraseña sea correcta.`);
+    }
+  }
+
+  for (const user of users) {
+    // Título claro: indica si se permite o deniega el acceso
+    const accessText = user.shouldSucceed ? 'Acceso permitido' : 'Acceso denegado';
+    test(`${accessText} - ${user.role} (${user.email})`, async () => {
+      await loginAs(user.email, user.password);
+
+      if (user.shouldSucceed) {
+        // Debe redirigir a /admin
+        await page.waitForURL('/admin');
+        const dashboardHeading = page.getByRole('heading', { name: 'Little Buddy', exact: true }).first();
+        await expect(dashboardHeading).toBeVisible();
+      } else {
+        // Debe redirigir a /unauthorized
+        await page.waitForURL('/unauthorized');
+        await expect(page.getByRole('heading', { name: 'Access Denied', exact: false })).toBeVisible();
+      }
+    });
+  }
+});
+</file>
+
+<file path="e2e/utils/api.ts">
+// e2e/utils/api.ts
+import { Page, APIResponse } from '@playwright/test';
+
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+export interface ApiRequestOptions {
+  method?: HttpMethod;
+  endpoint: string;
+  query?: Record<string, any>;
+  payload?: Record<string, any> | string;
+  headers?: Record<string, string>;
+  timeout?: number;
+}
+
+// Variables de entorno (asegúrate de tenerlas en .env)
+const BASE_API_URL = process.env.API_BASE_URL || 'https://api.presupbase.juvomos.com';
+const API_KEY = process.env.API_KEY;
+const SUPABASE_USER = process.env.USER;
+const SUPABASE_PASSWORD = process.env.PASSWORD;
+
+// Validaciones al inicio
+if (!API_KEY) {
+  throw new Error('❌ API_KEY no definida en el entorno (archivo .env)');
+}
+if (!SUPABASE_USER || !SUPABASE_PASSWORD) {
+  throw new Error('❌ SUPABASE_USER y SUPABASE_PASSWORD deben definirse en el entorno');
+}
+
+// Almacén del token (se reutiliza en toda la ejecución)
+let accessToken: string | null = null;
+
+/**
+ * Obtiene un nuevo token de acceso usando email/contraseña.
+ * Endpoint: /auth/v1/token?grant_type=password
+ * Envía JSON (Content-Type: application/json)
+ */
+async function fetchAccessToken(page: Page): Promise<string> {
+  const loginUrl = `${BASE_API_URL}/auth/v1/token?grant_type=password`;
+  const headers: any = {
+    'apikey': API_KEY,
+    'Content-Type': 'application/json',
+  };
+  const payload = {
+    email: SUPABASE_USER,
+    password: SUPABASE_PASSWORD,
+    // grant_type también se incluye en el body por si acaso
+    grant_type: 'password',
+  };
+
+  try {
+    const response = await page.context().request.fetch(loginUrl, {
+      method: 'POST',
+      headers,
+      data: JSON.stringify(payload),
+    });
+
+    if (!response.ok()) {
+      const errorText = await response.text();
+      throw new Error(`Login falló con status ${response.status()}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const token = data.access_token;
+    if (!token) {
+      throw new Error('No se recibió access_token en la respuesta de login');
+    }
+    return token;
+  } catch (error: any) {
+    throw new Error(`❌ Error al obtener token de acceso: ${error.message}`);
+  }
+}
+
+/**
+ * Asegura que tengamos un token válido (lo obtiene si no existe).
+ */
+async function ensureAccessToken(page: Page): Promise<string> {
+  if (accessToken) {
+    // Podrías añadir lógica de expiración aquí si lo deseas
+    return accessToken;
+  }
+  accessToken = await fetchAccessToken(page);
+  return accessToken;
+}
+
+// Función principal para hacer peticiones con autenticación automática
+export const apiRequest = async (
+  page: Page,
+  options: ApiRequestOptions
+): Promise<APIResponse> => {
+  const {
+    method = 'GET',
+    endpoint,
+    query,
+    payload,
+    headers = {},
+    timeout = 30000,
+  } = options;
+
+  let url = endpoint.startsWith('http') ? endpoint : `${BASE_API_URL}${endpoint}`;
+
+  // Agregar query params si existen
+  if (query && Object.keys(query).length > 0) {
+    const searchParams = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(query)) {
+      // Si el valor es un array o objeto, Supabase espera notación como 'column=in.(1,2,3)'
+      // o bien se puede pasar como JSON string, pero lo más común es usar strings simples.
+      if (Array.isArray(value)) {
+        // Ejemplo: { filter: ['eq', 'value'] } -> filter=eq.value
+        // Pero para simplificar, puedes unir con coma si es un array de valores
+        searchParams.append(key, value.join(','));
+      } else if (typeof value === 'object' && value !== null) {
+        // Para objetos, se puede convertir a JSON o usar notación punto, según lo que espere Supabase
+        searchParams.append(key, JSON.stringify(value));
+      } else {
+        searchParams.append(key, String(value));
+      }
+    }
+
+    const queryString = searchParams.toString();
+    url += (url.includes('?') ? '&' : '?') + queryString;
+  }
+
+  // Headers base
+  const defaultHeaders: any = {
+    'apikey': API_KEY,
+    'Content-Type': 'application/json',
+    'Content-Profile': 'public',
+    'Prefer': 'return=representation',
+  };
+
+  // Verificar si el usuario ya pasó un header 'Authorization' explícito
+  const hasAuthHeader = Object.keys(headers).some(
+    (key) => key.toLowerCase() === 'authorization'
+  );
+
+  // Si no hay header Authorization, obtenemos el token y lo añadimos
+  let finalHeaders = { ...defaultHeaders };
+  if (!hasAuthHeader) {
+    const token = await ensureAccessToken(page);
+    finalHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Sobrescribir con los headers proporcionados (pueden añadir o reemplazar)
+  finalHeaders = { ...finalHeaders, ...headers };
+
+  // Preparar body
+  let body: string | undefined;
+  if (payload) {
+    body = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  }
+
+  const requestOptions = {
+    method,
+    headers: finalHeaders,
+    data: body,
+    timeout,
+  };
+
+  try {
+    const response = await page.context().request.fetch(url, requestOptions);
+    return response;
+  } catch (error: any) {
+    throw new Error(`❌ apiRequest falló: ${method} ${url} - ${error.message}`);
+  }
+};
+
+// Helpers (sin cambios)
+export const apiGet = (page: Page, endpoint: string, query?: Record<string, any>, headers?: Record<string, string>) =>
+  apiRequest(page, { method: 'GET', endpoint, query, headers });
+
+export const apiPost = (page: Page, endpoint: string, payload: any, headers?: Record<string, string>) =>
+  apiRequest(page, { method: 'POST', endpoint, payload, headers });
+
+export const apiPut = (page: Page, endpoint: string, payload: any, headers?: Record<string, string>) =>
+  apiRequest(page, { method: 'PUT', endpoint, payload, headers });
+
+export const apiDelete = (page: Page, endpoint: string, headers?: Record<string, string>) =>
+  apiRequest(page, { method: 'DELETE', endpoint, headers });
+
+export const apiPatch = (page: Page, endpoint: string, payload: any, headers?: Record<string, string>) =>
+  apiRequest(page, { method: 'PATCH', endpoint, payload, headers });
+
+export const waitForResponse = (page: Page, endpoint: string, method: HttpMethod) => {
+  const url = endpoint.startsWith('http') ? endpoint : `${BASE_API_URL}${endpoint}`;
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes(url) && response.request().method() === method
+  );
+  return responsePromise
+}
+</file>
+
+<file path="e2e/utils/auth.ts">
+// e2e/utils/login.ts
+import { Page, BrowserContext, expect } from '@playwright/test';
+
+/**
+ * Realiza login por UI (navegación y llenado de formulario).
+ * Útil cuando necesitas simular la interacción real del usuario.
+ */
+export async function loginViaUI(page: Page, user?: string, password?: string) {
+  user ??= process.env.USER!;
+  password ??= process.env.PASSWORD!;
+
+  await page.goto('/login');
+  await page.getByRole('textbox', { name: 'Email address' }).fill(user);
+  await page.getByRole('textbox', { name: 'Password' }).fill(password);
+  // const authResponse = page.waitForResponse(
+  //   (response) => {
+  //     const url = new URL(response.url());
+  //     return url.pathname === '/auth/v1/token' && response.status() === 200;
+  //   }
+  // );
+
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  // // Espera a que la redirección al dashboard ocurra
+  await page.waitForURL('/admin');
+
+  // // Opcional: esperar a que algún elemento del dashboard sea visible
+  // await page.getByRole('heading', { name: 'Dashboard' }).waitFor({ timeout: 10000 });
+}
+
+/**
+ * Realiza login por API y establece las cookies en el contexto.
+ * Más rápido que UI, pero no prueba la interfaz de login.
+ */
+export async function loginViaAPI(context: BrowserContext) {
+  const email = process.env.USER!;
+  const password = process.env.PASSWORD!;
+  const apiBaseURL = process.env.API_BASE_URL || 'https://api.presupbase.juvomos.com';
+  const baseURL = process.env.BASE_URL!;
+
+  const response = await context.request.post(`${apiBaseURL}/auth/v1/token?grant_type=password`, {
+    data: {
+      email,
+      password,
+      gotrue_meta_security: {},
+    },
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Login API failed: ${response.status()} ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const accessToken = data.access_token;
+
+  // Establecer la cookie que la app espera
+  await context.addCookies([
+    {
+      name: 'sb-api-auth-token',
+      value: accessToken,
+      domain: new URL(baseURL).hostname,
+      path: '/',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'Lax' as const,
+    },
+  ]);
+
+  // Si la app usa localStorage, también lo podemos inyectar
+  await context.addInitScript(() => {
+    localStorage.setItem('lbc_remember_me', 'true');
+  });
+
+  // Guardar el estado en memoria (no en archivo) para este contexto
+  // No es necesario guardar en disco, ya que el contexto tiene las cookies.
+}
+</file>
+
+<file path="e2e/utils/generators.js">
+const { faker } = require('@faker-js/faker');
+
+/**
+ * Genera datos aleatorios para un niño
+ */
+export function generateChildData() {
+  const gender = faker.helpers.arrayElement(['male', 'female']);
+  return {
+    firstName: faker.person.firstName(gender),
+    lastName: faker.person.lastName(),
+    birthDate: faker.date.birthdate({ min: 0, max: 5, mode: 'age' }).toISOString().split('T')[0],
+    gender,
+    bloodType: faker.helpers.arrayElement(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
+    allergies: faker.helpers.arrayElement([null, 'Peanuts', 'Lactose', 'Eggs', null, null]),
+    medicalNotes: faker.helpers.arrayElement([faker.lorem.sentence(3), '']),
+  };
+}
+
+export function generateClassroomData(overrides = {}) {
+  return {
+    name: overrides.name || faker.company.name() + ' Classroom',
+    code: overrides.code || 'CLS-' + faker.string.alphanumeric(4).toUpperCase(),
+    level: overrides.level || faker.helpers.arrayElement(['Infants', 'Toddlers', 'Pre-Kindergarten', 'Kindergarten', 'Advanced', 'Multi-Age']),
+    size: overrides.size !== undefined ? overrides.size : faker.number.int({ min: 100, max: 1000 }),
+    status: overrides.status || 'Active',
+    building: overrides.building || faker.helpers.arrayElement(['Building A', 'Building B', 'Main Building']),
+    floor: overrides.floor !== undefined ? overrides.floor : faker.number.int({ min: 1, max: 3 }),
+    roomNumber: overrides.roomNumber || String(faker.number.int({ min: 100, max: 300 })),
+    notes: overrides.notes || faker.lorem.sentence(),
+  };
+}
+
+/**
+ * Genera datos aleatorios para un representante
+ */
+export function generateRepresentativeData() {
+  const relationship = faker.helpers.arrayElement(['mother', 'father', 'guardian', 'grandparent', 'aunt', 'uncle']);
+  return {
+    firstName: faker.person.firstName(),
+    lastName: faker.person.lastName(),
+    email: `test_e2e_${Date.now()}_${faker.string.alphanumeric(4)}@test.com`,
+    phone: faker.string.numeric(10),
+    relationship,
+    city: faker.location.city(),
+    idNumber: faker.string.numeric(10),
+  };
+}
+
+/**
+ * Genera datos para una escuela
+ */
+export function generateSchoolData() {
+  const name = faker.company.name() + ' School';
+  const code = 'SCH-' + faker.string.alphanumeric(4).toUpperCase();
+  return {
+    name,
+    schoolCode: code,
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + faker.string.alphanumeric(3).toLowerCase(),
+    email: faker.internet.email({ provider: 'school.com' }),
+    phone: '+1 ' + faker.string.numeric(10),
+    website: `https://${name.toLowerCase().replace(/[^a-z0-9]+/g, '')}.com`,
+  };
+}
+
+/**
+ * Genera datos para una factura
+ */
+export function generateInvoiceData(familyId) {
+  return {
+    familyId,
+    amount: parseFloat(faker.finance.amount({ min: 50, max: 500, dec: 2 })),
+    dueDate: faker.date.future().toISOString().split('T')[0],
+    description: faker.helpers.arrayElement(['Monthly Tuition', 'Enrollment Fee', 'Activity Fee', 'Material Fee']),
+  };
+}
+
+/**
+ * Genera datos para un aula (classroom)
+ */
+export function generateClassroomData(overrides = {}) {
+  return {
+    name: overrides.name || faker.company.name() + ' Classroom',
+    code: overrides.code || 'CLS-' + faker.string.alphanumeric(4).toUpperCase(),
+    level: overrides.level || faker.helpers.arrayElement(['Infants', 'Toddlers', 'Pre-Kindergarten', 'Kindergarten', 'Advanced', 'Multi-Age']),
+    size: overrides.size !== undefined ? overrides.size : faker.number.int({ min: 100, max: 1000 }),
+    status: overrides.status || 'Active',
+    building: overrides.building || faker.helpers.arrayElement(['Building A', 'Building B', 'Main Building']),
+    floor: overrides.floor !== undefined ? overrides.floor : faker.number.int({ min: 1, max: 3 }),
+    roomNumber: overrides.roomNumber || String(faker.number.int({ min: 100, max: 300 })),
+    notes: overrides.notes || faker.lorem.sentence(),
+  };
+}
+</file>
+
+<file path="e2e/utils/helpers.ts">
+// e2e/helpers.ts
+import { expect, Locator, Page } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+import { waitForResponse } from './api';
+
+// Cargar variables de entorno (por si no se cargaron desde playwright.config)
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+const isDebug = !!process.env.DEBUG
+
+// Función helper para logs condicionales
+export function debugLog(...args: any[]) {
+  if (isDebug) {
+    debugLog(...args);
+  }
+}
+
+export async function takeScreenshot(page: Page, name?: string, dirname='') {
+  const screenshotDir = path.resolve(__dirname, '../screenshots'+(dirname ? `/${dirname}` : ''));
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = (name ? name : timestamp)+'.png';
+  const filepath = path.join(screenshotDir, filename);
+  await page.screenshot({ path: filepath, fullPage: true });
+  console.log(`📸 Screenshot guardado: ${filepath}`);
+}
+
+export function sanitizeTitle(title: string): string {
+  // 1. Eliminar todo lo que está entre paréntesis (incluyendo los paréntesis)
+  // Ej: "Acceso permitido - Accountant (Contador) (hevola4569@dysonc.com)" 
+  //   -> "Acceso permitido - Accountant  "
+  let sanitized = title.replace(/\([^)]*\)/g, '');
+
+  // 2. Reemplazar espacios y caracteres especiales por guión bajo
+  sanitized = sanitized.replace(/[^a-zA-Z0-9\s\-.]/g, '_');
+
+  // 3. Reemplazar espacios por guión bajo
+  sanitized = sanitized.replace(/\s+/g, '_');
+
+  // 4. Eliminar guiones bajos múltiples (consecutivos)
+  sanitized = sanitized.replace(/_+/g, '_');
+
+  // 5. Eliminar guiones bajos al inicio y al final
+  sanitized = sanitized.replace(/^_|_$/g, '');
+
+  return sanitized;
+}
+
+/**
+ * Selecciona una opción de un dropdown con estructura específica
+ * Estructura: div:has(input[placeholder="..."]) + div ul li
+ *
+ * @param page - Instancia de Page
+ * @param placeholder - Texto del placeholder del input
+ * @param options - { index?: number, text?: string }
+ * @example
+ * // Seleccionar primera opción (por defecto)
+ * await selectDropdownOption(page, 'Search for a child...');
+ *
+ * // Seleccionar por índice (tercera opción)
+ * await selectDropdownOption(page, 'Search for a child...', { index: 2 });
+ *
+ * // Seleccionar por texto
+ * await selectDropdownOption(page, 'Search for a child...', { text: 'Aby Firststy' });
+ */
+export async function selectDropdownOption(
+  page: Page,
+  placeholder: string,
+  options: { index?: number; text?: string } = {}
+): Promise<void> {
+  const { index = 0, text } = options;
+
+  if (index !== undefined && text !== undefined) {
+    throw new Error('Provide either index OR text, not both');
+  }
+
+  const baseSelector = `div:has(input[placeholder="${placeholder}"]) + div ul`;
+
+  await page.getByRole('textbox', { name: placeholder }).click();
+  await expect(page.locator('ul')).toBeVisible();
+
+  let liSelector: string;
+  if (text) {
+    liSelector = `${baseSelector} li:has-text("${text}")`;
+  } else {
+    liSelector = `${baseSelector} li:nth-child(${index + 1})`;
+  }
+
+  await expect(page.locator(liSelector)).toBeVisible();
+  await page.locator(liSelector).click();
+}
+
+/**
+ * Realiza clic en un botón/enlace de acción (View, Edit, Delete) dentro de la tabla de cargos.
+ */
+// Función auxiliar para encontrar la fila
+export async function findTableRow(
+  page: Page,
+  options: { search?: string; column?: string; value?: string } = {}
+): Promise<Locator> {
+  if (options.search) {
+    await page.getByPlaceholder('Search charges...').fill(options.search);
+    await page.waitForTimeout(500);
+  }
+
+  await expect(page.locator('table')).toBeVisible();
+  const rows = page.locator('tbody tr');
+
+  if (options.column && options.value) {
+    const headers = await page.locator('thead th').allTextContents();
+    const columnIndex = headers.findIndex(th => th.trim().toLowerCase() === options.column!.trim().toLowerCase());
+    if (columnIndex === -1) {
+      throw new Error(`Columna "${options.column}" no encontrada en la tabla`);
+    }
+
+    const rowCount = await rows.count();
+    for (let i = 0; i < rowCount; i++) {
+      const row = rows.nth(i);
+      const cell = row.locator('td').nth(columnIndex);
+      const cellText = await cell.textContent();
+      const trimmedCellText = cellText?.trim() || '';
+      console.log(`Fila ${i + 1}, Columna "${options.column}": "${trimmedCellText}"`);
+      if (trimmedCellText.toLowerCase().includes(options.value.trim().toLowerCase())) {
+        return row;
+      }
+    }
+    throw new Error(`No se encontró fila con valor "${options.value}" en columna "${options.column}"`);
+  }
+
+  return rows.first();
+}
+
+// Función principal clickTableAction usando findTableRow
+export async function clickTableAction(
+  page: Page,
+  action: 'View' | 'Edit' | 'Delete' | string,
+  options: { search?: string; column?: string; value?: string } = {}
+): Promise<void> {
+  const targetRow = await findTableRow(page, options);
+
+  const link = targetRow.getByRole('link', { name: new RegExp(action, 'i') });
+  const button = targetRow.getByRole('button', { name: new RegExp(action, 'i') });
+  const actionLocator = link.or(button);
+  await actionLocator.click();
+  await page.waitForTimeout(2000);
+}
+
+/**
+ * Obtiene el contenedor del modal.
+ */
+export function getModal(page: Page) {
+  return page.locator('.fixed.inset-0.flex.items-center.justify-center.z-50');
+}
+
+/**
+ * Crea un cargo exitosamente y devuelve sus datos.
+ */
+export async function createCharge(page: Page) {
+  await page.goto('/admin/billing/charges/new');
+
+  await selectDropdownOption(page, 'Search for a child...');
+  await expect(page.getByText('Loading associated family...')).not.toBeVisible();
+
+  const dueDate = new Date();
+  dueDate.setMonth(dueDate.getMonth() + 1);
+  const dueDateStr = dueDate.toISOString().split('T')[0];
+
+  const description = `Late pickup ${Date.now()}`;
+  const amount = '2.5';
+  const notes = 'Example of details about the charge';
+
+  await page.getByRole('textbox', { name: 'E.g., Late pickup charge - 30' }).fill(description);
+  await page.getByRole('spinbutton').fill(amount);
+  await page.locator('input[type="date"]').fill(dueDateStr);
+  await page.getByRole('textbox', { name: 'Additional details about the' }).fill(notes);
+
+  const responsePromise = waitForResponse(page, '/rest/v1/charges', 'POST')
+
+  await page.getByRole('button', { name: 'Create Charge' }).click();
+
+  const response = await responsePromise;
+  expect(response.status()).toBe(201);
+  const responseBody = await response.json();
+
+  return responseBody;
+}
+
+/**
+ * Obtiene el locator del toast actual.
+ */
+export function getToast(page: Page): Locator {
+  const container = page.locator('section[aria-label="Notifications alt+T"]');
+  return container.locator('li[data-sonner-toast]').first();
+}
+
+/**
+ * Devuelve el código de color ANSI según el tipo de toast.
+ */
+function getColorForType(type?: string): { color: string; reset: string } {
+  const reset = '\x1b[0m';
+  let color = '\x1b[37m';
+  switch (type) {
+    case 'success':
+      color = '\x1b[32m';
+      break;
+    case 'error':
+      color = '\x1b[31m';
+      break;
+    case 'warning':
+      color = '\x1b[33m';
+      break;
+    case 'info':
+      color = '\x1b[34m';
+      break;
+    default:
+      color = '\x1b[37m';
+  }
+  return { color, reset };
+}
+
+/**
+ * Verifica que haya un toast visible, opcionalmente de un tipo y con texto.
+ */
+export async function expectToast(
+  page: Page,
+  options: { type?: 'success' | 'error' | 'warning' | 'info'; text?: string | RegExp } = {}
+): Promise<string> {
+  const toast = getToast(page);
+  await expect(toast).toBeVisible();
+
+  const title = toast.locator('[data-title]');
+  const toastMessage = await title.textContent();
+
+  let actualType = options.type;
+  if (!actualType) {
+    const dataType = await toast.getAttribute('data-type');
+    if (dataType) actualType = dataType as 'success' | 'error' | 'warning' | 'info';
+  }
+
+  const { color, reset } = getColorForType(actualType);
+  debugLog(`${color}🍞 Toast message: ${toastMessage?.trim() || 'No message'}${reset}`);
+
+  if (options.type) {
+    await expect(toast).toHaveAttribute('data-type', options.type);
+  }
+  if (options.text) {
+    if (typeof options.text === 'string') {
+      await expect(title).toHaveText(options.text);
+    } else {
+      await expect(title).toHaveText(options.text);
+    }
+  }
+  return await title.textContent() ?? ''
+}
+
+/**
+ * Encuentra el elemento de formulario (input, select, textarea) asociado a un label por su texto.
+ * Busca el primer label que contenga el texto exacto (ignorando asteriscos),
+ * sube al primer div ancestro, y dentro de él localiza el primer input, select o textarea.
+ *
+ * @param page - Instancia de Page
+ * @param labelText - Texto del label (puede incluir el asterisco, pero se busca por coincidencia parcial)
+ * @returns Locator del elemento de formulario o null si no se encuentra
+ */
+export function getFormFieldByLabel(
+  page: Page,
+  labelText: string,
+  exact: boolean = false
+): Locator | null {
+  // Si exact es true, busca coincidencia exacta
+  const labelSelector = exact
+    ? `label:text-is("${labelText}")`
+    : `label:has-text("${labelText}")`;
+
+  const label = page.locator(labelSelector).first();
+  if (!label) return null;
+
+  const container = label.locator('xpath=ancestor::div[1]');
+  if (!container) return null;
+
+  const field = container.locator('input, select, textarea').first();
+  return field;
+}
+
+/**
+ * Obtiene el valor (atributo "value") del campo de formulario asociado a un label.
+ * Útil para inputs de tipo date, text, number, o selects.
+ *
+ * @param page - Instancia de Page
+ * @param labelText - Texto del label
+ * @returns El valor del campo o null si no se encuentra
+ */
+export async function getFieldValueByLabel(page: Page, labelText: string): Promise<string | null> {
+  const field = getFormFieldByLabel(page, labelText);
+  if (!field) return null;
+  const value = await field.getAttribute('value');
+  return value;
+}
+
+/**
+ * Verifica que un campo del formulario exista y, opcionalmente, sea requerido.
+ */
+export async function expectFormField(
+  page: Page,
+  labelText: string,
+  options: { required?: boolean; notRequired?: boolean } = {}
+): Promise<void> {
+  const label = page.getByText(labelText, { exact: true }).first();
+  await expect(label).toBeVisible();
+
+  const asterisk = label.locator('span:text("*")');
+  if (options.required) {
+    await expect(asterisk).toBeVisible();
+    await expect(asterisk).toHaveClass(/text-red-500/);
+  } else {
+    await expect(asterisk).not.toBeVisible();
+  }
+}
+
+/**
+ * Verifica varios campos del formulario.
+ */
+export async function verifyFormFields(
+  page: Page,
+  fields: { label: string; required?: boolean }[],
+  formSelector: string = 'form'
+): Promise<void> {
+  const form = page.locator(formSelector).first();
+  await expect(form).toBeVisible();
+
+  const labelLocators = form.locator('label');
+  const count = await labelLocators.count();
+  const actualLabels: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const text = await labelLocators.nth(i).textContent();
+    if (text) {
+      const clean = text.replace(/\s*\*\s*$/, '').trim();
+      actualLabels.push(clean);
+    }
+  }
+
+  const expectedLabels = fields.map(f => f.label);
+  const missing = expectedLabels.filter(label => !actualLabels.includes(label));
+  const extra = actualLabels.filter(label => !expectedLabels.includes(label));
+
+  if (missing.length > 0) {
+    console.warn(`⚠️ Missing expected fields: ${missing.join(', ')}`);
+  }
+  if (extra.length > 0) {
+    console.warn(`⚠️ Extra fields found (not mentioned): ${extra.join(', ')}`);
+  }
+
+  for (const field of fields) {
+    await expectFormField(page, field.label, { required: field.required });
+  }
+}
+
+// Helper para capturar headers de una solicitud GET a la API
+export async function captureApiHeaders(page: Page): Promise<Record<string, string>> {
+  let capturedHeaders: Record<string, string> = {};
+  const headersPromise = new Promise<void>((resolve) => {
+    const listener = (request: any) => {
+      const url = request.url();
+      if (url.includes('/rest/v1/charges') && request.method() === 'GET') {
+        const headers = request.headers();
+        // Extraer los headers que necesita la API
+        capturedHeaders = {
+          'apikey': headers['apikey'] || '',
+          'Authorization': headers['authorization'] || '',
+          'Content-Type': headers['content-type'] || 'application/json',
+          'Content-Profile': headers['content-profile'] || 'public',
+          'Prefer': headers['prefer'] || 'return=representation',
+          'x-client-info': headers['x-client-info'] || '',
+          // Opcional: agregar Origin y Referer si la API los requiere
+          'Origin': headers['origin'] || 'https://prelbc.juvomos.com',
+          'Referer': headers['referer'] || 'https://prelbc.juvomos.com/',
+        };
+        // Limpiar valores undefined
+        Object.keys(capturedHeaders).forEach(key => {
+          if (!capturedHeaders[key]) delete capturedHeaders[key];
+        });
+
+        page.off('request', listener);
+        resolve();
+      }
+    };
+    page.on('request', listener);
+  });
+
+  // Navegar a la página de cargos para disparar la petición GET
+  await page.goto('/admin/billing/charges'); // Navegar a cualquiera.
+  await page.waitForLoadState('networkidle');
+
+  // Esperar a capturar los headers (máximo 10s)
+  await Promise.race([
+    headersPromise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout capturando headers')), 10000)),
+  ]);
+
+  if (!capturedHeaders) throw new Error('No se pudieron capturar los headers');
+
+  return capturedHeaders;
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "playwright": "^1.61.0",
+    "playwright-core": "^1.61.0",
+    "undici-types": "^8.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.0.0",
+    "dotenv": "^17.4.2"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
+</file>
+
+<file path="playwright.config.ts">
+import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+const timeout_factor = +(process.env.TIMEOUT_FACTOR || 1)
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : 1,
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],      // Reporte HTML
+    ['json', { outputFile: 'test-results.json' }],       // JSON (para integración)
+    ['list']                                             // Salida en consola
+  ],
+  timeout: 60000 * timeout_factor,
+  expect: {
+    timeout: 15000 * timeout_factor,
+  },
+  use: {
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    actionTimeout: 15000 * timeout_factor,
+    trace: 'on-first-retry', // capturas por cada accion_
+    video: 'on-first-retry',
+    screenshot: 'only-on-failure', // también 'on' para siempre
+  },
+
+  /* Configure projects for major browsers */
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+
+    // {
+    //   name: 'firefox',
+    //   use: {
+    //     ...devices['Desktop Firefox'],
+    //   },
+    // },
+
+    // {
+    //   name: 'webkit',
+    //   use: {
+    //     ...devices['Desktop Safari'],
+    //   },
+    // },
+
+    /* Test against mobile viewports. */
+    // {
+    //   name: 'Mobile Chrome',
+    //   use: { ...devices['Pixel 5'] },
+    // },
+    // {
+    //   name: 'Mobile Safari',
+    //   use: { ...devices['iPhone 12'] },
+    // },
+
+    /* Test against branded browsers. */
+    // {
+    //   name: 'Microsoft Edge',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    // },
+    // {
+    //   name: 'Google Chrome',
+    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    // },
+  ],
+
+  /* Run your local dev server before starting the tests */
+  // webServer: {
+  //   command: 'npm run start',
+  //   url: 'http://localhost:3000',
+  //   reuseExistingServer: !process.env.CI,
+  // },
+});
+</file>
+
+<file path="test-results.json">
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "login-by-role.spec.ts"
+    ],
+    "configFile": "C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\playwright.config.ts",
+    "rootDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 240000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.61.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "login-by-role.spec.ts",
+      "file": "login-by-role.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Login de usuarios por rol",
+          "file": "login-by-role.spec.ts",
+          "line": 71,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Acceso permitido - Accountant (Contador) (hevola4569@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 51854,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Accountant.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:07:09.047Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-d4e4b399e31515467763",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - Recepcionist (Recepcionista) (rosivov619@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18194,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Recepcionist.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:08:01.669Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-4181b4c3be0c8beb548c",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - School Administrator (Administrador escuela) (yokape8181@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25204,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_School_Administrator.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:08:19.942Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-e43b43ed9300668e9b20",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - Principal (tawoha1166@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 20791,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Principal.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:08:45.178Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-00e0af6785f252e62d70",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - SuperAdmin (lalcivar@lbcdevops.com)",
+              "ok": true,
+              "tags": [
+                "lbcdevops.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 32162,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_SuperAdmin.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:09:06.000Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-1a923a8baeb8e8e732d7",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - Organization Administrator (Administrador Organización) (qxknmidd14@wnbaldwy.com)",
+              "ok": true,
+              "tags": [
+                "wnbaldwy.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25781,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Organization_Administrator.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:09:38.183Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-c801da5f09eff469462a",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Assistant Teacher (tafalon882@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 29404,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Assistant_Teacher.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:10:03.974Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-9b9cd89e4db3f45d93b2",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Parent/Guardian (sefive5022@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 29577,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Parent_Guardian.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:10:33.398Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-d7be20b2d83e84157b1a",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Staff (kapide6822@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 37868,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Staff.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:11:03.001Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-979e41a857c8b81e5fce",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Teacher (sitar21927@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 36710,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Teacher.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:11:40.909Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-dc50b467ad0cc6eda3bd",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Custom Role (topecef102@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 37321,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Custom_Role.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:12:17.628Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-4663f0b08f0d07de82c4",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Parent (kihatid903@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 30986,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Parent.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:12:54.956Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-2ab3389a559e6e7f9bf8",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-08T13:07:08.428Z",
+    "duration": 377725.408,
+    "expected": 12,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
+</file>
+
+</files>

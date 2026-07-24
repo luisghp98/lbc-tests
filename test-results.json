@@ -1,0 +1,581 @@
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "login-by-role.spec.ts"
+    ],
+    "configFile": "C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\playwright.config.ts",
+    "rootDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 240000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.61.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "login-by-role.spec.ts",
+      "file": "login-by-role.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Login de usuarios por rol",
+          "file": "login-by-role.spec.ts",
+          "line": 71,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Acceso permitido - Accountant (Contador) (hevola4569@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 51854,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Accountant.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:07:09.047Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-d4e4b399e31515467763",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - Recepcionist (Recepcionista) (rosivov619@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18194,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Recepcionist.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:08:01.669Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-4181b4c3be0c8beb548c",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - School Administrator (Administrador escuela) (yokape8181@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25204,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_School_Administrator.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:08:19.942Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-e43b43ed9300668e9b20",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - Principal (tawoha1166@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 20791,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Principal.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:08:45.178Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-00e0af6785f252e62d70",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - SuperAdmin (lalcivar@lbcdevops.com)",
+              "ok": true,
+              "tags": [
+                "lbcdevops.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 32162,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_SuperAdmin.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:09:06.000Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-1a923a8baeb8e8e732d7",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso permitido - Organization Administrator (Administrador Organización) (qxknmidd14@wnbaldwy.com)",
+              "ok": true,
+              "tags": [
+                "wnbaldwy.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 25781,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Organization_Administrator.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:09:38.183Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-c801da5f09eff469462a",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Assistant Teacher (tafalon882@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 29404,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Assistant_Teacher.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:10:03.974Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-9b9cd89e4db3f45d93b2",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Parent/Guardian (sefive5022@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 29577,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Parent_Guardian.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:10:33.398Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-d7be20b2d83e84157b1a",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Staff (kapide6822@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 37868,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Staff.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:11:03.001Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-979e41a857c8b81e5fce",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Teacher (sitar21927@epaynine.com)",
+              "ok": true,
+              "tags": [
+                "epaynine.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 36710,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Teacher.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:11:40.909Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-dc50b467ad0cc6eda3bd",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Custom Role (topecef102@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 37321,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Custom_Role.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:12:17.628Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-4663f0b08f0d07de82c4",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            },
+            {
+              "title": "Acceso denegado - Parent (kihatid903@dysonc.com)",
+              "ok": true,
+              "tags": [
+                "dysonc.com)"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 30986,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Parent.png\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-08T13:12:54.956Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "8dcf8365ceaa620aff11-2ab3389a559e6e7f9bf8",
+              "file": "login-by-role.spec.ts",
+              "line": 118,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-08T13:07:08.428Z",
+    "duration": 377725.408,
+    "expected": 12,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
