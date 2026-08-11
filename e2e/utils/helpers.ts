@@ -5,14 +5,15 @@ import path from 'path';
 import { waitForResponse } from './api';
 
 // Cargar variables de entorno (por si no se cargaron desde playwright.config)
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// __dirname es e2e/utils, así que el .env está dos niveles arriba (raíz del repo).
+dotenv.config({ path: path.resolve(__dirname, '../../.env'), override: true });
 
 const isDebug = !!process.env.DEBUG
 
 // Función helper para logs condicionales
 export function debugLog(...args: any[]) {
   if (isDebug) {
-    debugLog(...args);
+    console.log(...args);
   }
 }
 

@@ -2,7 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+// override: true es intencional. Sin él, dotenv respeta las variables que ya
+// existan en el entorno, y shells tipo Git Bash / WSL definen USER con el nombre
+// de usuario del sistema operativo: la suite intentaría loguearse con "luisg" en
+// vez del correo del .env. Con override, el .env es la única fuente de verdad.
+dotenv.config({ path: path.resolve(__dirname, '.env'), override: true });
 
 const timeout_factor = +(process.env.TIMEOUT_FACTOR || 1)
 export default defineConfig({

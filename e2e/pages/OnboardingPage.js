@@ -1,4 +1,7 @@
 const { getFormFieldByLabel } = require('../utils/helpers');
+const { resolveSchoolId, resolveFirstClassroomId } = require('../utils/school');
+
+const API_HOST = process.env.API_BASE_URL || 'https://api.presupbase.juvomos.com';
 
 /**
  * OnboardingPage — Page object for the 4-step child enrollment wizard.
@@ -110,8 +113,16 @@ class OnboardingPage {
     const lName = getFormFieldByLabel(this.page, 'Last Name *');
     if (lName) await lName.fill(lastName || 'TestChild');
 
-    const dobField = getFormFieldByLabel(this.page, 'Date of Birth *');
-    if (dobField) await dobField.fill(birthDate || '2025-03-15');
+    // 1. Calculamos la fecha para que el niño tenga exactamente 4 años
+    const childBirthDate = new Date();
+    childBirthDate.setFullYear(childBirthDate.getFullYear() - 4);
+
+    // 2. Le damos el formato correcto (YYYY-MM-DD) que aceptan los inputs tipo fecha
+    const dateOfBirthString = childBirthDate.toISOString().slice(0, 10);
+
+    // 3. Llenas el campo en tu formulario (Asegúrate de usar el selector correcto de tu app)
+    const dobField = getFormFieldByLabel(this.page, 'Date of Birth'); // o this.page.getByLabel('Date of Birth')
+    await dobField.fill(dateOfBirthString);
 
     const genderField = getFormFieldByLabel(this.page, 'Gender *');
     if (genderField) {
@@ -237,8 +248,8 @@ class OnboardingPage {
   // -------------------------------------------------------------------------
   async fillStep3({ allergy } = {}) {
     if (allergy) {
-      const input = this.page.locator('input[placeholder*="allergy" i]').first();
-      if (await input.isVisible({ timeout: 3000 }).catch(() => false)) {
+      const input = this.page.locator('input[placeholder*="Type allergy and press Enter" i]').first();
+      if (await input.isVisible().catch(() => false)) {
         await input.fill(allergy);
         await this.page.keyboard.press('Enter');
       }
@@ -253,98 +264,125 @@ class OnboardingPage {
   }
 
   // -------------------------------------------------------------------------
-  // STEP 4: Enrollment
+  // STEP 4: Enrollment (Fix: Selectores exactos y End Date global)
   // -------------------------------------------------------------------------
   async fillStep4({ classroom } = {}) {
-    // Esperar que el formulario de inscripción esté listo (el botón "Complete Enrollment" o algún select)
+    console.log('  Step 4.0: Starting fillStep4');
+
+    console.log('  Step 4.1: Waiting for Complete Enrollment button...');
     const completeBtn = this.page.getByRole('button', { name: /Complete Enrollment/i });
     await completeBtn.waitFor({ state: 'visible', timeout: 30000 });
 
-    // --- Select Classroom ---
-    const classroomField = getFormFieldByLabel(this.page, 'Select Classroom');
-    if (classroomField && await classroomField.isVisible().catch(() => false)) {
-      const optHandles = await classroomField.locator('option').elementHandles();
-      let targetVal = null;
-      for (const op of optHandles) {
-        const dis = await op.isDisabled().catch(() => false);
-        const txt = (await op.innerText()).trim();
-        const val = await op.getAttribute('value').catch(() => '');
-        if (!dis && txt && !/select classroom/i.test(txt) && val) { targetVal = val; break; }
-      }
-      if (targetVal) await classroomField.selectOption({ value: targetVal }).catch(() => { });
-    }
-
-    // --- Enrollment Type ---
-    const typeField = getFormFieldByLabel(this.page, 'Enrollment Type');
-    if (typeField && await typeField.isVisible().catch(() => false)) {
-      const optHandles = await typeField.locator('option').elementHandles();
-      let tVal = null;
-      for (const op of optHandles) {
-        const dis = await op.isDisabled().catch(() => false);
-        const txt = (await op.innerText()).trim();
-        const val = await op.getAttribute('value').catch(() => '');
-        if (!dis && txt && !/select enrollment/i.test(txt) && val) { tVal = val; break; }
-      }
-      if (tVal) await typeField.selectOption({ value: tVal }).catch(() => { });
-    }
-
-    // --- Start Date ---
-    const startDateField = getFormFieldByLabel(this.page, 'Start Date');
-    if (startDateField && await startDateField.isVisible().catch(() => false)) {
-      const today = new Date().toISOString().slice(0, 10);
-      await startDateField.fill(today).catch(() => { });
-    }
-
-    // --- Academic Year ---
-    const academicField = getFormFieldByLabel(this.page, 'Academic Year');
-    if (academicField && await academicField.isVisible().catch(() => false)) {
-      const tag = await academicField.evaluate(el => el.tagName.toLowerCase());
-      if (tag === 'select') {
-        const opts = await academicField.locator('option').allInnerTexts().catch(() => []);
-        const currentYear = String(new Date().getFullYear());
-        if (opts.some(o => o.trim() === currentYear)) {
-          await academicField.selectOption({ label: currentYear }).catch(() => { });
-        } else if (opts.length > 1) {
-          await academicField.selectOption({ index: 1 }).catch(() => { });
+    // --- 1. Select Classroom ---
+    console.log('  Step 4.2: Select Classroom...');
+    const classroomField = this.page.locator('label', { hasText: 'Select Classroom' }).locator('..').locator('select');
+    if (await classroomField.isVisible().catch(() => false)) {
+      const options = await classroomField.locator('option').all();
+      for (const opt of options) {
+        const disabled = await opt.getAttribute('disabled');
+        const value = await opt.getAttribute('value');
+        if (value && disabled === null) {
+          await classroomField.selectOption({ value });
+          break;
         }
+      }
+    }
+
+    // --- 2. Enrollment Type ---
+    console.log('  Step 4.3: Enrollment Type...');
+    const typeField = this.page.locator('label', { hasText: 'Enrollment Type' }).locator('..').locator('select');
+    if (await typeField.isVisible().catch(() => false)) {
+      await typeField.selectOption({ index: 1 }); // Selecciona la primera opción válida (ej. Full Time)
+    }
+
+    // --- 3. Start Date & End Date (Globales) ---
+    console.log('  Step 4.4: Dates...');
+    const startDateField = this.page.locator('label', { hasText: 'Start Date' }).locator('..').locator('input[type="date"]');
+    if (await startDateField.isVisible().catch(() => false)) {
+      const today = new Date().toISOString().slice(0, 10);
+      await startDateField.fill(today);
+    }
+
+    const endDateField = this.page.locator('label', { hasText: 'End Date' }).locator('..').locator('input[type="date"]');
+    if (await endDateField.isVisible().catch(() => false)) {
+      const futureDate = new Date();
+      futureDate.setMonth(futureDate.getMonth() + 6);
+      await endDateField.fill(futureDate.toISOString().slice(0, 10));
+    }
+
+    // --- 4. Academic Year ---
+    const academicField = this.page.locator('label', { hasText: 'Academic Year' }).locator('..').locator('input, select');
+    if (await academicField.isVisible().catch(() => false)) {
+      const tag = await academicField.evaluate(el => el.tagName.toLowerCase());
+      const currentYear = String(new Date().getFullYear());
+      if (tag === 'select') {
+        await academicField.selectOption({ index: 1 }); // Asume que la primera opción útil es el año actual
       } else {
-        await academicField.fill(String(new Date().getFullYear())).catch(() => { });
+        await academicField.fill(currentYear);
       }
     }
 
-    // --- Sync Products (botón) ---
+    // --- 5. Sync Products ---
     const syncBtn = this.page.getByRole('button', { name: /sync products/i });
-    if (await syncBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await syncBtn.click({ timeout: 5000 }).catch(() => { });
+    if (await syncBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await syncBtn.click();
+      await this.page.waitForTimeout(1000); // Esperar sincronización
     }
 
-    // --- Agregar primer ítem ---
-    const addFirst = this.page.getByRole('button', { name: /Add First Item/i });
-    const addItem = this.page.getByRole('button', { name: /^Add Item$/i });
-    if (await addFirst.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await addFirst.click({ timeout: 5000 }).catch(() => { });
-    } else if (await addItem.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await addItem.click({ timeout: 5000 }).catch(() => { });
-    }
+    // ============================================================
+    // 6. AGREGAR ÍTEMS DE FACTURA (INVOICE ITEMS)
+    // ============================================================
+    console.log('  Step 4.6: Adding Invoice Items...');
+    const addItemBtn = this.page.getByRole('button', { name: 'Add Item' });
 
-    // Seleccionar un producto (ej. Matrícula) - no hay label, usamos el select dentro del item
-    const productSelects = this.page.locator('select').filter({ has: this.page.locator('option:has-text("Matricula")') });
-    if (await productSelects.count() > 0) {
-      const sel = productSelects.first();
-      await sel.selectOption({ label: /matricula/i }).catch(() => { });
-      const qtyInput = this.page.locator('input[type="number"]').first();
-      if (await qtyInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await qtyInput.fill('1').catch(() => { });
+    // Si ya hay un select vacío o necesitamos darle click
+    const getProductSelect = (index) =>
+      this.page.locator('select').filter({ hasText: 'Select a product or service...' }).nth(index);
+
+    if (await addItemBtn.isVisible().catch(() => false)) {
+      // El HTML que pasaste indica que ya hay un ítem vacío renderizado por defecto. 
+      // Verificamos si existe el primer select antes de hacer clic en Add Item.
+      let firstSelect = getProductSelect(0);
+
+      if (await firstSelect.count() === 0) {
+        await addItemBtn.click();
+        await this.page.waitForTimeout(500);
+      }
+
+      firstSelect = getProductSelect(0);
+      if (await firstSelect.isVisible().catch(() => false)) {
+        // Tomar la segunda opción (índice 1), ya que la primera (0) es el placeholder "Select a product..."
+        const firstOptValue = await firstSelect.locator('option').nth(1).getAttribute('value');
+        if (firstOptValue) {
+          await firstSelect.selectOption({ value: firstOptValue });
+          console.log(`  Step 4.7: First product selected`);
+        }
+      }
+
+      // --- 7. Agregar segundo ítem ---
+      await addItemBtn.click();
+      await this.page.waitForTimeout(500); // Dar tiempo a que el DOM dibuje el nuevo cajón
+
+      const secondSelect = getProductSelect(1);
+      if (await secondSelect.isVisible().catch(() => false)) {
+        // Tomar la tercera opción (índice 2) para que sea un producto distinto
+        const secondOptValue = await secondSelect.locator('option').nth(2).getAttribute('value');
+        if (secondOptValue) {
+          await secondSelect.selectOption({ value: secondOptValue });
+          console.log(`  Step 4.8: Second product selected`);
+        }
       }
     }
 
-    // --- Aceptar documentos (checkbox) ---
-    const docsCb = getFormFieldByLabel(this.page, 'All Required Documents Submitted (Mandatory for onboarding)');
-    if (docsCb && !(await docsCb.isChecked().catch(() => false))) {
-      await docsCb.check();
+    // --- 8. Aceptar documentos ---
+    const docsCb = this.page.locator('#all_documents_submitted_enrollment');
+    if (await docsCb.isVisible().catch(() => false)) {
+      if (!(await docsCb.isChecked().catch(() => false))) {
+        await docsCb.check({ force: true });
+      }
     }
 
-    console.log('  Step 4 filled');
+    console.log('  Step 4.10: fillStep4 completed successfully');
   }
 
   // -------------------------------------------------------------------------
@@ -437,9 +475,11 @@ class OnboardingPage {
   // Métodos auxiliares para API (se mantienen igual)
   // -------------------------------------------------------------------------
   async _getAuthHeaders() {
-    const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc5NDc4MzE5LCJleHAiOjE5MzcxNTgzMTl9.VbuKKxQWSNJ0GFSU8VE-RQFJhx1wR-kD8NPgpi83VbI';
-    const ADMIN = 's5n4v1k1z6@ruutukf.com';
-    const ADMIN_PASS = 'Algo12345';
+    const key = process.env.API_KEY;
+    const ADMIN = process.env.USER;
+    const ADMIN_PASS = process.env.PASSWORD;
+    if (!key) throw new Error('API_KEY no definida en el .env');
+    if (!ADMIN || !ADMIN_PASS) throw new Error('USER y PASSWORD deben definirse en el .env');
 
     if (this._cachedAuth && Date.now() < this._cachedAuth.expiresAt) {
       return this._cachedAuth.headers;
@@ -471,7 +511,7 @@ class OnboardingPage {
   _httpsReq(path, method, headers, body) {
     return new Promise((resolve) => {
       const data = body ? Buffer.from(body) : null;
-      const req = require('https').request('https://api.presupbase.juvomos.com' + path, {
+      const req = require('https').request(API_HOST + path, {
         method,
         headers: Object.assign({}, headers, data ? { 'Content-Length': data.length } : {})
       }, (res) => {
@@ -513,14 +553,43 @@ class OnboardingPage {
     return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
   }
 
+  /** school_id del usuario del .env, resuelto desde la sesión (sin UUID quemado). */
+  async schoolId() {
+    return await resolveSchoolId(this.page);
+  }
+
+  /**
+   * Id del producto/servicio a facturar. Busca uno llamado "Matricula" y, si el
+   * colegio no lo tiene, cae al primero disponible.
+   */
+  async _productServiceId(nombre = 'Matricula') {
+    if (this._cachedServiceId) return this._cachedServiceId;
+    const headers = await this._getAuthHeaders();
+
+    const porNombre = await this._httpsReq(
+      `/rest/v1/product_services?name=eq.${encodeURIComponent(nombre)}&select=id&limit=1`, 'GET', headers);
+    let id = porNombre.json && porNombre.json[0] && porNombre.json[0].id;
+
+    if (!id) {
+      const primero = await this._httpsReq('/rest/v1/product_services?select=id&limit=1', 'GET', headers);
+      id = primero.json && primero.json[0] && primero.json[0].id;
+    }
+    if (!id) {
+      throw new Error(
+        `El colegio del usuario "${process.env.USER}" no tiene productos/servicios cargados.`);
+    }
+    this._cachedServiceId = id;
+    return id;
+  }
+
   _round2(n) { return Number((Math.round(n * 100) / 100).toFixed(2)); }
 
   async createOnboardingEntities(opts) {
     opts = opts || {};
-    const SCHOOL = 'f14b95b1-72d7-4970-9784-df60ad9a02ee';
-    const CLASSROOM = opts.classroomId || '97393759-cd03-42e5-b052-fc3d4d196a57';
-    const SVC = 'cba19d20-d848-43c8-8437-c3b3d36a49e8'; // Matricula
     const svc = opts.service || { price: 45, tax_rate: 0.12, billing_frequency: 'monthly', name: 'Matricula' };
+    const SCHOOL = await this.schoolId();
+    const CLASSROOM = opts.classroomId || await resolveFirstClassroomId(this.page);
+    const SVC = opts.productServiceId || await this._productServiceId(svc.name);
     const tax = this._round2(svc.price * svc.tax_rate);
     const total = this._round2(svc.price + tax);
     const today = new Date().toISOString().slice(0, 10);
@@ -640,7 +709,7 @@ class OnboardingPage {
 
   async payInvoice(invoiceId, opts) {
     opts = opts || {};
-    const SCHOOL = 'f14b95b1-72d7-4970-9784-df60ad9a02ee';
+    const SCHOOL = await this.schoolId();
     const svc = opts.service || { price: 45, tax_rate: 0.12, billing_frequency: 'monthly', name: 'Matricula' };
     const tax = this._round2(svc.price * svc.tax_rate);
     const total = this._round2(svc.price + tax);

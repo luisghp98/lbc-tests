@@ -4,7 +4,7 @@
       "C:\\Program Files\\nodejs\\node.exe",
       "C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\node_modules\\@playwright\\test\\cli.js",
       "test",
-      "login-by-role.spec.ts"
+      "--list"
     ],
     "configFile": "C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\playwright.config.ts",
     "rootDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/e2e",
@@ -17,18 +17,14 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {
-      "actualWorkers": 1
-    },
+    "metadata": {},
     "preserveOutput": "always",
     "projects": [
       {
         "outputDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "chromium",
         "name": "chromium",
         "testDir": "C:/Users/luisg/Documents/JUVO/LBC/tests/e2e",
@@ -72,16 +68,1673 @@
   },
   "suites": [
     {
-      "title": "login-by-role.spec.ts",
-      "file": "login-by-role.spec.ts",
+      "title": "example.spec.ts",
+      "file": "example.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Example",
+          "file": "example.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-FAM-10 - Editar dirección de miembro correctamente y persistir tras recarga",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a30a6eba6312f6b87ea5-36c805f4428bcde905ce",
+              "file": "example.spec.ts",
+              "line": 120,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "template.spec.ts",
+      "file": "template.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Feature Name",
+          "file": "template.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-XXX-01 - Test description",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6b4fac3782d13b479fa7-1aa8dae55774617fff17",
+              "file": "template.spec.ts",
+              "line": 28,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tests\\billing\\charge.spec.ts",
+      "file": "tests/billing/charge.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Create Charge",
+          "file": "tests/billing/charge.spec.ts",
+          "line": 16,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-CH-01 - Verify Create Charge UI",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-c1b4431e00843ccffd12",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 33,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-02 - Validate required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-5f74cf52b5fb11fa226d",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 46,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-03 - Create charge successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-4756aa0d77017da80df4",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 58,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-04 - Edit charge fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-892e0d6b4b393a7bcf51",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 76,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-05 - Delete charge from Table (Pending)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-d67f7b48b24e07803e9b",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 120,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-06 - Delete charge from Charge view",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-4e4194170fe75f3c1c44",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 131,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-07 - Change charge to Accepted and Invoice created",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-867145c8f9a566877352",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 144,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-08 - Change charge to Waived",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-c972f05b5850b8f02d0a",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 210,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-09 - Change charge to Disputed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-f2aad7d124e2fceedf18",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 226,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-10 - Eliminar un cargo pendiente vía API (DELETE) debe eliminarlo correctamente",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-c0e2e19eb265a36b7209",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 242,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-11 - No debe permitir la eliminación de un cargo Aceptado",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-05105109e899b30669b8",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 268,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-12 - No debe permitir la eliminación de un cargo Condonado (Waive)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-314f4cbda595fd102a8a",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 302,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-13 - No debe permitir la eliminación de un cargo en Disputa",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-8b36f5287dc4c45929b7",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 332,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-14 - No debe permitir la edición de un cargo Aceptado",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-f89b1d1cd9d806af4c1e",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 362,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-15 - No debe permitir la edición de un cargo Condonado (Waive)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-db20140fa7842be89e3f",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 396,
+              "column": 7
+            },
+            {
+              "title": "CP-CH-16 - Debe permitir la edición de un cargo en Disputa",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5029b6129715f192117-862b77887fa4f34e4466",
+              "file": "tests/billing/charge.spec.ts",
+              "line": 429,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tests\\billing\\CP-746-01-to-20-billing.spec.js",
+      "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CP-746: Billing E2E (LBC-746)",
+          "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+          "line": 23,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-746-01: Billing page loads with invoice list",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-ed15a34d662705d60b48",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 50,
+              "column": 3
+            },
+            {
+              "title": "CP-746-02: Invoice list shows columns",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-e447fc796bacf50f79f1",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 60,
+              "column": 3
+            },
+            {
+              "title": "CP-746-03: Invoice status filter works",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-0846c5c3502f492177b4",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 70,
+              "column": 3
+            },
+            {
+              "title": "CP-746-04: Invoice detail accessible",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-ba78855e8d8136d1fc38",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 82,
+              "column": 3
+            },
+            {
+              "title": "CP-746-05: API returns invoices for school",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-d7fcc063665dcf6f7306",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 94,
+              "column": 3
+            },
+            {
+              "title": "CP-746-06: Invoice statuses are valid",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-be21f98ec127a93156d4",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 112,
+              "column": 3
+            },
+            {
+              "title": "CP-746-07: Payment section accessible",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-5a4d6f596631a0c28679",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 129,
+              "column": 3
+            },
+            {
+              "title": "CP-746-08: Payment form has required fields",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-9b3fab638ed9d97ec4b1",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 139,
+              "column": 3
+            },
+            {
+              "title": "CP-746-09: API returns payment history",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-4feacc0311cc93e5bf5b",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 168,
+              "column": 3
+            },
+            {
+              "title": "CP-746-10: Payment links to invoice",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-f181278bb17246bbedd1",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 182,
+              "column": 3
+            },
+            {
+              "title": "CP-746-11: Charges page loads",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-b6f01c53e3bab78382f6",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 207,
+              "column": 3
+            },
+            {
+              "title": "CP-746-12: API returns charges for school",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-c3107baf3762e4e28245",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 217,
+              "column": 3
+            },
+            {
+              "title": "CP-746-13: Charge statuses are valid",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-39c8d312e2de05a06309",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 228,
+              "column": 3
+            },
+            {
+              "title": "CP-746-14: Charge types are valid",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-5206322ccf68cc4b1132",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 241,
+              "column": 3
+            },
+            {
+              "title": "CP-746-15: Crear cargo via API y verificar en UI",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-f6bf9420633b50257873",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 258,
+              "column": 3
+            },
+            {
+              "title": "CP-746-16: Cambiar estado de cargo via API y verificar badge en UI",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-4cf0494377b59d4dbf3f",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 295,
+              "column": 3
+            },
+            {
+              "title": "CP-746-17: Crear cargo via UI (Add Charge)",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-95d1bd9ffbc450e11d78",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 326,
+              "column": 3
+            },
+            {
+              "title": "CP-746-18: Boton Pay visible en invoice elegible",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-3362b7e3d14e046b48ec",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 384,
+              "column": 3
+            },
+            {
+              "title": "CP-746-19: Procesar pago via API y verificar en UI",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-97beb9083fb47ff11da5",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 411,
+              "column": 3
+            },
+            {
+              "title": "CP-746-20: Payment transaction persistida en BD",
+              "ok": true,
+              "tags": [
+                "billing",
+                "cp-746",
+                "lbc-746"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e9d4878f65d3c97a0924-5aa2a891a13da6b2e368",
+              "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
+              "line": 468,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tests\\classrooms\\CP-CLS-01-to-07-classroom-config.spec.js",
+      "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CP-CLS: Classroom CRUD - Flujo Principal",
+          "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-CLS-01: Crear aula con campos obligatorios y completos",
+              "ok": true,
+              "tags": [
+                "classroom",
+                "cp-cls"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "812ea37eaa5866f83284-f3d27d5dd9f686b9cfa9",
+              "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+              "line": 20,
+              "column": 3
+            },
+            {
+              "title": "CP-CLS-02: Editar aula existente",
+              "ok": true,
+              "tags": [
+                "classroom",
+                "cp-cls"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "812ea37eaa5866f83284-0389cca62137a007ca17",
+              "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "CP-CLS-03: Listado de aulas y columnas visibles",
+              "ok": true,
+              "tags": [
+                "classroom",
+                "cp-cls"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "812ea37eaa5866f83284-955d56334f55882270ba",
+              "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+              "line": 92,
+              "column": 3
+            },
+            {
+              "title": "CP-CLS-04: Cambiar estado del aula (Active → Inactive → Active)",
+              "ok": true,
+              "tags": [
+                "classroom",
+                "cp-cls"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "812ea37eaa5866f83284-412ea6879cb108c754b6",
+              "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+              "line": 115,
+              "column": 3
+            },
+            {
+              "title": "CP-CLS-05: Validación de campos requeridos",
+              "ok": true,
+              "tags": [
+                "classroom",
+                "cp-cls"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "812ea37eaa5866f83284-b0858b72d505fc2e91f3",
+              "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+              "line": 156,
+              "column": 3
+            },
+            {
+              "title": "CP-CLS-06: Configurar horarios y amenities",
+              "ok": true,
+              "tags": [
+                "classroom",
+                "cp-cls"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "812ea37eaa5866f83284-b0674ed6317c86a4a7a4",
+              "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+              "line": 173,
+              "column": 3
+            },
+            {
+              "title": "CP-CLS-07: Asignar ratio de personal",
+              "ok": true,
+              "tags": [
+                "classroom",
+                "cp-cls"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "812ea37eaa5866f83284-31ab88847cd47be6f227",
+              "file": "tests/classrooms/CP-CLS-01-to-07-classroom-config.spec.js",
+              "line": 208,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tests\\classrooms\\CP-INSPECT-LEVELS.spec.js",
+      "file": "tests/classrooms/CP-INSPECT-LEVELS.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "Inspect Level select options",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 240000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [],
+              "status": "skipped"
+            }
+          ],
+          "id": "4415e6a4ba9d46eef273-006326a4aa7df5adeda9",
+          "file": "tests/classrooms/CP-INSPECT-LEVELS.spec.js",
+          "line": 4,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "tests\\families\\issue-524.spec.ts",
+      "file": "tests/families/issue-524.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Family Address",
+          "file": "tests/families/issue-524.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-FAM-01 - Verificar campos del modal de editar dirección",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-7266a32d0b8b9104a5c1",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 91,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-02 - Editar dirección de familia correctamente y persistir tras recarga",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-58f862b1e282ed1159d0",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 102,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-03 - Limpiar todos los campos de dirección de la familia",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-6f9e81b06aee66e59565",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 136,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-04 - Enviar valores con solo espacios en blanco",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-ad0e838b0dd171ba24bf",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 164,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-05 - Caracteres especiales en ciudad y estado",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-d6774e2df663bcd4d00f",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 199,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-06 - Código postal alfanumérico (formato UK)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-edd711225e7ebfb777fe",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 227,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-07 - Dirección larga (500 caracteres)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-d8327a56dbb7dfc3f9b9",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 252,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-08 - Inyección XSS en campos de dirección",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-548fd00fad0ac0dc2886",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 277,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Family Member",
+          "file": "tests/families/issue-524.spec.ts",
+          "line": 308,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-FAM-09 - Verificar campos de dirección en el modal de editar miembro",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-b7cd0604240542f70e4b",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 401,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-10 - Editar dirección de miembro correctamente y persistir tras recarga",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-d2c314a823bcbac21a01",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 413,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-11 - Limpiar todos los campos de dirección del miembro",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-5726ef084495a3fa7872",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 449,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-12 - Enviar valores con solo espacios en blanco en miembro",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-b89a5e7dcb7ebcc3fdd8",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 478,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-13 - Caracteres especiales en ciudad y estado de miembro",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-0530770c31eab29bc0f6",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 514,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-14 - Código postal alfanumérico (formato UK) en miembro",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-2047fac8e4cb42ebcd80",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 543,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-15 - Dirección larga (500 caracteres) en miembro",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-2f1880ac5495a3f4324f",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 569,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-16 - Inyección XSS en campos de dirección de miembro",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-b8380793daa90d019a8e",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 595,
+              "column": 7
+            },
+            {
+              "title": "CP-FAM-17 - Abrir modal de agregar miembro y verificar campos de dirección y botones",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0536cace03d31495648d-d038ba32c7a61da442a9",
+              "file": "tests/families/issue-524.spec.ts",
+              "line": 626,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tests\\onboarding\\CP-ONB-01-to-06-onboarding.spec.js",
+      "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CP-ONB: Onboarding del Nino (flujo E2E del wizard)",
+          "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-ONB-01: Registro completo del nino via wizard de 4 pasos",
+              "ok": true,
+              "tags": [
+                "onboarding",
+                "cp-onb"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b7b4afb5a3e457402b57-d063bdcc73fbdc6cfc33",
+              "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "CP-ONB-02: Registro con solo campos obligatorios",
+              "ok": true,
+              "tags": [
+                "onboarding",
+                "cp-onb"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b7b4afb5a3e457402b57-12d02e18fea0ff291829",
+              "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "CP-ONB-04: Acceso al wizard sin sesion redirige a login",
+              "ok": true,
+              "tags": [
+                "onboarding",
+                "cp-onb"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b7b4afb5a3e457402b57-06659b5b4bb501afc600",
+              "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "CP-ONB-05: Persistencia de la informacion en la base de datos",
+              "ok": true,
+              "tags": [
+                "onboarding",
+                "cp-onb"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b7b4afb5a3e457402b57-a130bd559a9b65456e09",
+              "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "CP-ONB-06: Validacion de ratio nino-staff y forzamiento activo",
+              "ok": true,
+              "tags": [
+                "onboarding",
+                "cp-onb"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b7b4afb5a3e457402b57-c1a84309ba6cedc5470f",
+              "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+              "line": 90,
+              "column": 3
+            },
+            {
+              "title": "CP-ONB-07: Creacion de la familia asociada al nino",
+              "ok": true,
+              "tags": [
+                "onboarding",
+                "cp-onb"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b7b4afb5a3e457402b57-c14731a0a475bb576bc8",
+              "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+              "line": 122,
+              "column": 3
+            },
+            {
+              "title": "CP-ONB-08: Factura de onboarding y cargos 1 recurrente + 1 no recurrente",
+              "ok": true,
+              "tags": [
+                "onboarding",
+                "cp-onb"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b7b4afb5a3e457402b57-73a71d7001d7dbb62b4e",
+              "file": "tests/onboarding/CP-ONB-01-to-06-onboarding.spec.js",
+              "line": 138,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tests\\permissions\\login-by-role.spec.ts",
+      "file": "tests/permissions/login-by-role.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
           "title": "Login de usuarios por rol",
-          "file": "login-by-role.spec.ts",
-          "line": 71,
+          "file": "tests/permissions/login-by-role.spec.ts",
+          "line": 72,
           "column": 6,
           "specs": [
             {
@@ -97,31 +1750,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 51854,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Accountant.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:07:09.047Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-d4e4b399e31515467763",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-d71a90c2cee227aab8c3",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -137,31 +1772,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 18194,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Recepcionist.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:08:01.669Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-4181b4c3be0c8beb548c",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-cec43fffa1a332bf5b6e",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -177,31 +1794,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 25204,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_School_Administrator.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:08:19.942Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-e43b43ed9300668e9b20",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-8d71e43fcfc726f4d9d2",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -217,31 +1816,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 20791,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Principal.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:08:45.178Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-00e0af6785f252e62d70",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-c77efb97b8a1ee6703f5",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -257,31 +1838,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 32162,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_SuperAdmin.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:09:06.000Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-1a923a8baeb8e8e732d7",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-2021a0afa9d6b90f7082",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -297,31 +1860,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 25781,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_permitido_-_Organization_Administrator.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:09:38.183Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-c801da5f09eff469462a",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-077701cfbb3967bfd952",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -337,31 +1882,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 29404,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Assistant_Teacher.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:10:03.974Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-9b9cd89e4db3f45d93b2",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-582444767e20b2bf48e6",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -377,31 +1904,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 29577,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Parent_Guardian.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:10:33.398Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-d7be20b2d83e84157b1a",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-6c7e59db6dacfc0c4530",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -417,31 +1926,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 37868,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Staff.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:11:03.001Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-979e41a857c8b81e5fce",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-cce818b836307fe1f4b7",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -457,31 +1948,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 36710,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Teacher.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:11:40.909Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-dc50b467ad0cc6eda3bd",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-9c76aa2bed91ca3fd629",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -497,31 +1970,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 37321,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Custom_Role.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:12:17.628Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-4663f0b08f0d07de82c4",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-752ca95fccb8c2acdd30",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             },
             {
@@ -537,31 +1992,13 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 30986,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "📸 Screenshot guardado: C:\\Users\\luisg\\Documents\\JUVO\\LBC\\tests\\e2e\\screenshots\\ok_Acceso_denegado_-_Parent.png\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-08T13:12:54.956Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "8dcf8365ceaa620aff11-2ab3389a559e6e7f9bf8",
-              "file": "login-by-role.spec.ts",
-              "line": 118,
+              "id": "510e8ab572eaeda744df-115350b1ac0689455d37",
+              "file": "tests/permissions/login-by-role.spec.ts",
+              "line": 131,
               "column": 9
             }
           ]
@@ -571,10 +2008,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-08T13:07:08.428Z",
-    "duration": 377725.408,
-    "expected": 12,
-    "skipped": 0,
+    "startTime": "2026-08-11T08:12:29.957Z",
+    "duration": 136.57799999999997,
+    "expected": 0,
+    "skipped": 82,
     "unexpected": 0,
     "flaky": 0
   }

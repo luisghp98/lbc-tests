@@ -1,8 +1,8 @@
 const { test, expect } = require('@playwright/test');
-const { loginAsAdmin } = require('../../shared/auth');
+const { loginViaUI } = require('../../utils/auth');
 
 test('Inspect Level select options', async ({ page }) => {
-  await loginAsAdmin(page);
+  await loginViaUI(page);
   await page.goto('/admin/classrooms/new');
   await page.waitForFunction(() => !document.body.innerText.includes('Loading'), { timeout: 60000 });
 

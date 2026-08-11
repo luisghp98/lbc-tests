@@ -4,9 +4,9 @@ import {
   clickTableAction,
   getModal,
   getFormFieldByLabel,
-} from '../utils/helpers';
-import { waitForResponse } from '../utils/api';
-import { loginViaUI } from '../utils/auth';
+} from '../../utils/helpers';
+import { waitForResponse } from '../../utils/api';
+import { loginViaUI } from '../../utils/auth';
 
 test.describe('Family Address', () => {
   let sharedContext: BrowserContext;

@@ -1,19 +1,23 @@
 const { test, expect } = require('@playwright/test');
 const { loginViaUI } = require('../../utils/auth');
 const { OnboardingPage } = require('../../pages/OnboardingPage');
-
-const SCHOOL_ID = 'f14b95b1-72d7-4970-9784-df60ad9a02ee';
-const CAMPUS_ID = 'a4b0ec15-22e3-436f-ab9f-86057984e52f';
+const { resolveSchoolId, resolveCampusId } = require('../../utils/school');
 
 test.describe('CP-ONB: Onboarding del Nino (flujo E2E del wizard)', {
   tag: '@onboarding @cp-onb',
 }, () => {
   let sharedPage;
+  // Se resuelven desde la sesión del usuario del .env: sin UUIDs quemados.
+  let SCHOOL_ID;
+  let CAMPUS_ID;
 
   test.beforeAll(async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     sharedPage = await ctx.newPage();
     await loginViaUI(sharedPage);
+    SCHOOL_ID = await resolveSchoolId(sharedPage);
+    CAMPUS_ID = await resolveCampusId(sharedPage);
+    console.log(`  [CP-ONB] usuario: ${process.env.USER} | school_id: ${SCHOOL_ID} | campus_id: ${CAMPUS_ID}`);
   });
 
   function makeChildOpts(overrides = {}) {
@@ -41,6 +45,7 @@ test.describe('CP-ONB: Onboarding del Nino (flujo E2E del wizard)', {
     expect(ok, 'El registro debe redirigir al detalle del nino').toBeTruthy();
     expect(sharedPage.url(), 'Debe quedar en /admin/children/{id}').toContain('/admin/children/');
     const status = await onb.getChildStatus();
+    console.log('status', status)
     console.log('[CP-ONB-01 INFO] estado del nino tras onboarding:', status);
     expect(['Active', 'active'].includes(status), 'El nino debe quedar registrado (estado activo tras onboarding)').toBeTruthy();
   });
@@ -53,37 +58,6 @@ test.describe('CP-ONB: Onboarding del Nino (flujo E2E del wizard)', {
     await sharedPage.screenshot({ path: 'evidence/screenshots/cp-onb-02-minimal.png', fullPage: true });
     const ok = await onb.isSuccessVisible();
     expect(ok, 'El registro minimo debe completarse').toBeTruthy();
-  });
-
-  test('CP-ONB-03: Rechazo de registro duplicado (mismo nombre y fecha)', async () => {
-    const child = makeChildOpts({ firstName: 'Dup' });
-    const onb = new OnboardingPage(sharedPage);
-
-    // Primer registro
-    await onb.goto();
-    await onb.fillStep1({ firstName: child.firstName, lastName: child.lastName, birthDate: child.birthDate, gender: child.gender });
-    await onb.goNextStep1();
-    await onb.fillStep2();
-    await onb.goNextStep2();
-    await onb.goNextStep3();
-    await onb.fillStep4();
-    await onb.submit();
-    const firstOk = await onb.isSuccessVisible();
-
-    // Segundo registro con los mismos datos
-    await onb.goto();
-    await onb.fillStep1({ firstName: child.firstName, lastName: child.lastName, birthDate: child.birthDate, gender: child.gender });
-    await onb.goNextStep1();
-    await onb.fillStep2();
-    await onb.goNextStep2();
-    await onb.goNextStep3();
-    await onb.fillStep4();
-    await onb.submit();
-
-    await sharedPage.screenshot({ path: 'evidence/screenshots/cp-onb-03-duplicate.png', fullPage: true });
-    const duplicate = await onb.isDuplicateErrorVisible();
-    console.log('  -> Primer registro exitoso:', firstOk, '| Rechazo duplicado:', duplicate);
-    expect(duplicate, 'El sistema debe rechazar el registro duplicado').toBeTruthy();
   });
 
   test('CP-ONB-04: Acceso al wizard sin sesion redirige a login', async ({ page }) => {

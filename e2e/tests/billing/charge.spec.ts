@@ -9,9 +9,9 @@ import {
   getFieldValueByLabel,
   getModal,
   verifyFormFields,
-} from '../utils/helpers';
-import { apiDelete, apiGet, apiPatch } from '../utils/api';
-import { loginViaUI } from '../utils/auth';
+} from '../../utils/helpers';
+import { apiDelete, apiGet, apiPatch } from '../../utils/api';
+import { loginViaUI } from '../../utils/auth';
 
 test.describe('Create Charge', () => {
   let sharedContext: BrowserContext;

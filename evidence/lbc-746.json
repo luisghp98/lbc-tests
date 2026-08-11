@@ -1,0 +1,229 @@
+{
+  "project": "LBC-746",
+  "casos": [
+    {
+      "id": "CP-746-01",
+      "desc": "Billing page loads with invoice list",
+      "real": "Invoice list visible: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c"
+      }
+    },
+    {
+      "id": "CP-746-02",
+      "desc": "Invoice list shows columns",
+      "real": "Found 9 columns: INVOICE #, FAMILY, CHILD, RESPONSIBLE, DATE, TOTAL, BALANCE, STATUS, ACTIONS",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-03",
+      "desc": "Invoice status filter works",
+      "real": "Selects: 1, filter options: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c"
+      }
+    },
+    {
+      "id": "CP-746-04",
+      "desc": "Invoice detail accessible",
+      "real": "Detail page loaded: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c"
+      }
+    },
+    {
+      "id": "CP-746-05",
+      "desc": "API returns invoices for school",
+      "real": "HTTP 200, 5 invoices, amounts numeric: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-06",
+      "desc": "Invoice statuses are valid",
+      "real": "All valid: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-07",
+      "desc": "Payment section accessible",
+      "real": "Payment page loaded: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c"
+      }
+    },
+    {
+      "id": "CP-746-08",
+      "desc": "Payment form has required fields",
+      "real": "Controles presentes (4/4): titulo, buscador, refrescar, filtros",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c"
+      }
+    },
+    {
+      "id": "CP-746-09",
+      "desc": "API returns payment history",
+      "real": "HTTP 200, 2 transactions, valid statuses: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-10",
+      "desc": "Payment links to invoice",
+      "real": "Cross-reference OK: true (HTTP 200)",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "invoiceId": "0428d9a0-48d4-4f55-9363-a88c33412c96",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-11",
+      "desc": "Charges page loads",
+      "real": "Charges page loaded: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c"
+      }
+    },
+    {
+      "id": "CP-746-12",
+      "desc": "API returns charges for school",
+      "real": "HTTP 200, 10 charges",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-13",
+      "desc": "Charge statuses are valid",
+      "real": "All valid: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-14",
+      "desc": "Charge types are valid",
+      "real": "All valid: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-15",
+      "desc": "Crear cargo via API y verificar en UI",
+      "real": "Charge edd26365-ebc5-4e72-9798-fb38617fce18 creado+persistido en BD, visible en UI: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "chargeId": "edd26365-ebc5-4e72-9798-fb38617fce18",
+        "familyId": "a218a88a-536c-4084-ae14-248acad010e5",
+        "created": true,
+        "cleaned": true
+      }
+    },
+    {
+      "id": "CP-746-16",
+      "desc": "Cambiar estado de cargo via API y verificar badge en UI",
+      "real": "Status→paid, badge 'Accepted': true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "chargeId": "a5a0c795-65db-4c7d-b88b-87891b4dcd6e",
+        "created": true,
+        "cleaned": true
+      }
+    },
+    {
+      "id": "CP-746-17",
+      "desc": "Crear cargo via UI (Add Charge)",
+      "real": "UI charge created, redirect detalle: true (chargeId=69cacbfd-28b9-4887-81c9-8a59fdfd7197), desc visible: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "description": "E2E UI Charge 1786436667572",
+        "chargeId": "69cacbfd-28b9-4887-81c9-8a59fdfd7197",
+        "created": true,
+        "cleaned": true
+      }
+    },
+    {
+      "id": "CP-746-18",
+      "desc": "Boton Pay visible en invoice elegible",
+      "real": "5 facturas elegibles, botón Pay visible: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "facturasElegibles": 5
+      }
+    },
+    {
+      "id": "CP-746-19",
+      "desc": "Procesar pago via API y verificar en UI",
+      "real": "POST /payment_transactions -> 403 (esperado: los pagos los crea mx merchant vía webhook, no por REST directa)",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "invoiceId": "0a8b5379-ed92-4207-a9f1-8e501e5a9858",
+        "readOnly": true
+      }
+    },
+    {
+      "id": "CP-746-20",
+      "desc": "Payment transaction persistida en BD",
+      "real": "2 transactions with id/amount/status; valid: true",
+      "status": "passed",
+      "defecto": "",
+      "testData": {
+        "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
+        "readOnly": true
+      }
+    }
+  ]
+}

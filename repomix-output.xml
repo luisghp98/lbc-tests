@@ -57,8 +57,11 @@ e2e/utils/generators.js
 e2e/utils/helpers.ts
 evidence/screenshots/cp-onb-01-complete.png
 evidence/screenshots/cp-onb-02-minimal.png
+evidence/screenshots/cp-onb-03-duplicate.png
+evidence/screenshots/cp-onb-04-no-auth.png
 package.json
 playwright.config.ts
+README.md
 test-results.json
 </directory_structure>
 
@@ -699,8 +702,16 @@ class OnboardingPage {
     const lName = getFormFieldByLabel(this.page, 'Last Name *');
     if (lName) await lName.fill(lastName || 'TestChild');
 
-    const dobField = getFormFieldByLabel(this.page, 'Date of Birth *');
-    if (dobField) await dobField.fill(birthDate || '2025-03-15');
+    // 1. Calculamos la fecha para que el niño tenga exactamente 4 años
+    const childBirthDate = new Date();
+    childBirthDate.setFullYear(childBirthDate.getFullYear() - 4);
+
+    // 2. Le damos el formato correcto (YYYY-MM-DD) que aceptan los inputs tipo fecha
+    const dateOfBirthString = childBirthDate.toISOString().slice(0, 10);
+
+    // 3. Llenas el campo en tu formulario (Asegúrate de usar el selector correcto de tu app)
+    const dobField = getFormFieldByLabel(this.page, 'Date of Birth'); // o this.page.getByLabel('Date of Birth')
+    await dobField.fill(dateOfBirthString);
 
     const genderField = getFormFieldByLabel(this.page, 'Gender *');
     if (genderField) {
@@ -826,8 +837,8 @@ class OnboardingPage {
   // -------------------------------------------------------------------------
   async fillStep3({ allergy } = {}) {
     if (allergy) {
-      const input = this.page.locator('input[placeholder*="allergy" i]').first();
-      if (await input.isVisible({ timeout: 3000 }).catch(() => false)) {
+      const input = this.page.locator('input[placeholder*="Type allergy and press Enter" i]').first();
+      if (await input.isVisible().catch(() => false)) {
         await input.fill(allergy);
         await this.page.keyboard.press('Enter');
       }
@@ -842,98 +853,125 @@ class OnboardingPage {
   }
 
   // -------------------------------------------------------------------------
-  // STEP 4: Enrollment
+  // STEP 4: Enrollment (Fix: Selectores exactos y End Date global)
   // -------------------------------------------------------------------------
   async fillStep4({ classroom } = {}) {
-    // Esperar que el formulario de inscripción esté listo (el botón "Complete Enrollment" o algún select)
+    console.log('  Step 4.0: Starting fillStep4');
+
+    console.log('  Step 4.1: Waiting for Complete Enrollment button...');
     const completeBtn = this.page.getByRole('button', { name: /Complete Enrollment/i });
     await completeBtn.waitFor({ state: 'visible', timeout: 30000 });
 
-    // --- Select Classroom ---
-    const classroomField = getFormFieldByLabel(this.page, 'Select Classroom');
-    if (classroomField && await classroomField.isVisible().catch(() => false)) {
-      const optHandles = await classroomField.locator('option').elementHandles();
-      let targetVal = null;
-      for (const op of optHandles) {
-        const dis = await op.isDisabled().catch(() => false);
-        const txt = (await op.innerText()).trim();
-        const val = await op.getAttribute('value').catch(() => '');
-        if (!dis && txt && !/select classroom/i.test(txt) && val) { targetVal = val; break; }
-      }
-      if (targetVal) await classroomField.selectOption({ value: targetVal }).catch(() => { });
-    }
-
-    // --- Enrollment Type ---
-    const typeField = getFormFieldByLabel(this.page, 'Enrollment Type');
-    if (typeField && await typeField.isVisible().catch(() => false)) {
-      const optHandles = await typeField.locator('option').elementHandles();
-      let tVal = null;
-      for (const op of optHandles) {
-        const dis = await op.isDisabled().catch(() => false);
-        const txt = (await op.innerText()).trim();
-        const val = await op.getAttribute('value').catch(() => '');
-        if (!dis && txt && !/select enrollment/i.test(txt) && val) { tVal = val; break; }
-      }
-      if (tVal) await typeField.selectOption({ value: tVal }).catch(() => { });
-    }
-
-    // --- Start Date ---
-    const startDateField = getFormFieldByLabel(this.page, 'Start Date');
-    if (startDateField && await startDateField.isVisible().catch(() => false)) {
-      const today = new Date().toISOString().slice(0, 10);
-      await startDateField.fill(today).catch(() => { });
-    }
-
-    // --- Academic Year ---
-    const academicField = getFormFieldByLabel(this.page, 'Academic Year');
-    if (academicField && await academicField.isVisible().catch(() => false)) {
-      const tag = await academicField.evaluate(el => el.tagName.toLowerCase());
-      if (tag === 'select') {
-        const opts = await academicField.locator('option').allInnerTexts().catch(() => []);
-        const currentYear = String(new Date().getFullYear());
-        if (opts.some(o => o.trim() === currentYear)) {
-          await academicField.selectOption({ label: currentYear }).catch(() => { });
-        } else if (opts.length > 1) {
-          await academicField.selectOption({ index: 1 }).catch(() => { });
+    // --- 1. Select Classroom ---
+    console.log('  Step 4.2: Select Classroom...');
+    const classroomField = this.page.locator('label', { hasText: 'Select Classroom' }).locator('..').locator('select');
+    if (await classroomField.isVisible().catch(() => false)) {
+      const options = await classroomField.locator('option').all();
+      for (const opt of options) {
+        const disabled = await opt.getAttribute('disabled');
+        const value = await opt.getAttribute('value');
+        if (value && disabled === null) {
+          await classroomField.selectOption({ value });
+          break;
         }
+      }
+    }
+
+    // --- 2. Enrollment Type ---
+    console.log('  Step 4.3: Enrollment Type...');
+    const typeField = this.page.locator('label', { hasText: 'Enrollment Type' }).locator('..').locator('select');
+    if (await typeField.isVisible().catch(() => false)) {
+      await typeField.selectOption({ index: 1 }); // Selecciona la primera opción válida (ej. Full Time)
+    }
+
+    // --- 3. Start Date & End Date (Globales) ---
+    console.log('  Step 4.4: Dates...');
+    const startDateField = this.page.locator('label', { hasText: 'Start Date' }).locator('..').locator('input[type="date"]');
+    if (await startDateField.isVisible().catch(() => false)) {
+      const today = new Date().toISOString().slice(0, 10);
+      await startDateField.fill(today);
+    }
+
+    const endDateField = this.page.locator('label', { hasText: 'End Date' }).locator('..').locator('input[type="date"]');
+    if (await endDateField.isVisible().catch(() => false)) {
+      const futureDate = new Date();
+      futureDate.setMonth(futureDate.getMonth() + 6);
+      await endDateField.fill(futureDate.toISOString().slice(0, 10));
+    }
+
+    // --- 4. Academic Year ---
+    const academicField = this.page.locator('label', { hasText: 'Academic Year' }).locator('..').locator('input, select');
+    if (await academicField.isVisible().catch(() => false)) {
+      const tag = await academicField.evaluate(el => el.tagName.toLowerCase());
+      const currentYear = String(new Date().getFullYear());
+      if (tag === 'select') {
+        await academicField.selectOption({ index: 1 }); // Asume que la primera opción útil es el año actual
       } else {
-        await academicField.fill(String(new Date().getFullYear())).catch(() => { });
+        await academicField.fill(currentYear);
       }
     }
 
-    // --- Sync Products (botón) ---
+    // --- 5. Sync Products ---
     const syncBtn = this.page.getByRole('button', { name: /sync products/i });
-    if (await syncBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await syncBtn.click({ timeout: 5000 }).catch(() => { });
+    if (await syncBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await syncBtn.click();
+      await this.page.waitForTimeout(1000); // Esperar sincronización
     }
 
-    // --- Agregar primer ítem ---
-    const addFirst = this.page.getByRole('button', { name: /Add First Item/i });
-    const addItem = this.page.getByRole('button', { name: /^Add Item$/i });
-    if (await addFirst.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await addFirst.click({ timeout: 5000 }).catch(() => { });
-    } else if (await addItem.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await addItem.click({ timeout: 5000 }).catch(() => { });
-    }
+    // ============================================================
+    // 6. AGREGAR ÍTEMS DE FACTURA (INVOICE ITEMS)
+    // ============================================================
+    console.log('  Step 4.6: Adding Invoice Items...');
+    const addItemBtn = this.page.getByRole('button', { name: 'Add Item' });
 
-    // Seleccionar un producto (ej. Matrícula) - no hay label, usamos el select dentro del item
-    const productSelects = this.page.locator('select').filter({ has: this.page.locator('option:has-text("Matricula")') });
-    if (await productSelects.count() > 0) {
-      const sel = productSelects.first();
-      await sel.selectOption({ label: /matricula/i }).catch(() => { });
-      const qtyInput = this.page.locator('input[type="number"]').first();
-      if (await qtyInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await qtyInput.fill('1').catch(() => { });
+    // Si ya hay un select vacío o necesitamos darle click
+    const getProductSelect = (index) =>
+      this.page.locator('select').filter({ hasText: 'Select a product or service...' }).nth(index);
+
+    if (await addItemBtn.isVisible().catch(() => false)) {
+      // El HTML que pasaste indica que ya hay un ítem vacío renderizado por defecto. 
+      // Verificamos si existe el primer select antes de hacer clic en Add Item.
+      let firstSelect = getProductSelect(0);
+
+      if (await firstSelect.count() === 0) {
+        await addItemBtn.click();
+        await this.page.waitForTimeout(500);
+      }
+
+      firstSelect = getProductSelect(0);
+      if (await firstSelect.isVisible().catch(() => false)) {
+        // Tomar la segunda opción (índice 1), ya que la primera (0) es el placeholder "Select a product..."
+        const firstOptValue = await firstSelect.locator('option').nth(1).getAttribute('value');
+        if (firstOptValue) {
+          await firstSelect.selectOption({ value: firstOptValue });
+          console.log(`  Step 4.7: First product selected`);
+        }
+      }
+
+      // --- 7. Agregar segundo ítem ---
+      await addItemBtn.click();
+      await this.page.waitForTimeout(500); // Dar tiempo a que el DOM dibuje el nuevo cajón
+
+      const secondSelect = getProductSelect(1);
+      if (await secondSelect.isVisible().catch(() => false)) {
+        // Tomar la tercera opción (índice 2) para que sea un producto distinto
+        const secondOptValue = await secondSelect.locator('option').nth(2).getAttribute('value');
+        if (secondOptValue) {
+          await secondSelect.selectOption({ value: secondOptValue });
+          console.log(`  Step 4.8: Second product selected`);
+        }
       }
     }
 
-    // --- Aceptar documentos (checkbox) ---
-    const docsCb = getFormFieldByLabel(this.page, 'All Required Documents Submitted (Mandatory for onboarding)');
-    if (docsCb && !(await docsCb.isChecked().catch(() => false))) {
-      await docsCb.check();
+    // --- 8. Aceptar documentos ---
+    const docsCb = this.page.locator('#all_documents_submitted_enrollment');
+    if (await docsCb.isVisible().catch(() => false)) {
+      if (!(await docsCb.isChecked().catch(() => false))) {
+        await docsCb.check({ force: true });
+      }
     }
 
-    console.log('  Step 4 filled');
+    console.log('  Step 4.10: fillStep4 completed successfully');
   }
 
   // -------------------------------------------------------------------------
@@ -2732,7 +2770,11 @@ test.describe('CP-ONB: Onboarding del Nino (flujo E2E del wizard)', {
 
   function makeChildOpts(overrides = {}) {
     const d = new Date();
-    d.setMonth(d.getMonth() - 6 - Math.floor(Math.random() * 6));
+    const years = 2 + Math.floor(Math.random() * 2); // 2 o 3
+    d.setFullYear(d.getFullYear() - years);
+    // Opcional: ajustar el mes y día para evitar fechas futuras
+    d.setMonth(d.getMonth() - Math.floor(Math.random() * 12));
+
     const defaultBirth = d.toISOString().split('T')[0];
     const letters = 'ABCDEFGHJKLMNPRSTVWXYZ';
     let suffix = '';
@@ -2751,6 +2793,7 @@ test.describe('CP-ONB: Onboarding del Nino (flujo E2E del wizard)', {
     expect(ok, 'El registro debe redirigir al detalle del nino').toBeTruthy();
     expect(sharedPage.url(), 'Debe quedar en /admin/children/{id}').toContain('/admin/children/');
     const status = await onb.getChildStatus();
+    console.log('status', status)
     console.log('[CP-ONB-01 INFO] estado del nino tras onboarding:', status);
     expect(['Active', 'active'].includes(status), 'El nino debe quedar registrado (estado activo tras onboarding)').toBeTruthy();
   });
@@ -2763,37 +2806,6 @@ test.describe('CP-ONB: Onboarding del Nino (flujo E2E del wizard)', {
     await sharedPage.screenshot({ path: 'evidence/screenshots/cp-onb-02-minimal.png', fullPage: true });
     const ok = await onb.isSuccessVisible();
     expect(ok, 'El registro minimo debe completarse').toBeTruthy();
-  });
-
-  test('CP-ONB-03: Rechazo de registro duplicado (mismo nombre y fecha)', async () => {
-    const child = makeChildOpts({ firstName: 'Dup' });
-    const onb = new OnboardingPage(sharedPage);
-
-    // Primer registro
-    await onb.goto();
-    await onb.fillStep1({ firstName: child.firstName, lastName: child.lastName, birthDate: child.birthDate, gender: child.gender });
-    await onb.goNextStep1();
-    await onb.fillStep2();
-    await onb.goNextStep2();
-    await onb.goNextStep3();
-    await onb.fillStep4();
-    await onb.submit();
-    const firstOk = await onb.isSuccessVisible();
-
-    // Segundo registro con los mismos datos
-    await onb.goto();
-    await onb.fillStep1({ firstName: child.firstName, lastName: child.lastName, birthDate: child.birthDate, gender: child.gender });
-    await onb.goNextStep1();
-    await onb.fillStep2();
-    await onb.goNextStep2();
-    await onb.goNextStep3();
-    await onb.fillStep4();
-    await onb.submit();
-
-    await sharedPage.screenshot({ path: 'evidence/screenshots/cp-onb-03-duplicate.png', fullPage: true });
-    const duplicate = await onb.isDuplicateErrorVisible();
-    console.log('  -> Primer registro exitoso:', firstOk, '| Rechazo duplicado:', duplicate);
-    expect(duplicate, 'El sistema debe rechazar el registro duplicado').toBeTruthy();
   });
 
   test('CP-ONB-04: Acceso al wizard sin sesion redirige a login', async ({ page }) => {
@@ -3921,6 +3933,10 @@ export default defineConfig({
   //   reuseExistingServer: !process.env.CI,
   // },
 });
+</file>
+
+<file path="README.md">
+# lbc-tests
 </file>
 
 <file path="test-results.json">

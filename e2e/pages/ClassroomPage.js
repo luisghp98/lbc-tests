@@ -1,3 +1,4 @@
+const { expect } = require('@playwright/test');
 const { getFormFieldByLabel } = require('../utils/helpers');
 
 class ClassroomPage {
@@ -304,8 +305,9 @@ class ClassroomPage {
     if (!token) return null;
     try {
       const encoded = encodeURIComponent(name).replace(/%20/g, '+');
-      const res = await fetch('https://api.presupbase.juvomos.com/rest/v1/classrooms?select=id,classroom_name&classroom_name=eq.' + encoded, {
-        headers: { 'Authorization': 'Bearer ' + token, 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc5NDc4MzE5LCJleHAiOjE5MzcxNTgzMTl9.VbuKKxQWSNJ0GFSU8VE-RQFJhx1wR-kD8NPgpi83VbI' }
+      const apiHost = process.env.API_BASE_URL || 'https://api.presupbase.juvomos.com';
+      const res = await fetch(apiHost + '/rest/v1/classrooms?select=id,classroom_name&classroom_name=eq.' + encoded, {
+        headers: { 'Authorization': 'Bearer ' + token, 'apikey': process.env.API_KEY }
       });
       const data = await res.json();
       if (data && data.length > 0) return data[0].id;
