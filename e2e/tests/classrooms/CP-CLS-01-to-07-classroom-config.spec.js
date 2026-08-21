@@ -52,7 +52,7 @@ test.describe('CP-CLS: Classroom CRUD - Flujo Principal', {
       const cls = new ClassroomPage(page);
       await cls.gotoList();
 
-      const hasTable = await page.locator('table').isVisible({ timeout: 10000 }).catch(() => false);
+      const hasTable = await page.locator('table').isVisible().catch(() => false);
       const hasCards = await page.locator('[class*="card"]:has(a[href*="/classrooms/"])').count().catch(() => 0);
       expect(hasTable || hasCards > 0).toBeTruthy();
 
@@ -96,7 +96,7 @@ test.describe('CP-CLS: Classroom CRUD - Flujo Principal', {
       const cls = new ClassroomPage(page);
       await cls.gotoList();
 
-      const hasTable = await page.locator('table').isVisible({ timeout: 10000 }).catch(() => false);
+      const hasTable = await page.locator('table').isVisible().catch(() => false);
       const hasCards = await page.locator('[class*="card"]:has(a[href*="/classrooms/"])').count().catch(() => 0);
       const hasClassroomLinks = await page.locator('a[href*="/classrooms/"]').count().catch(() => 0);
 
@@ -234,7 +234,7 @@ test.describe('CP-CLS: Classroom CRUD - Flujo Principal', {
       const cls = new ClassroomPage(page);
       await cls.gotoList();
 
-      const hasTable = await page.locator('table').isVisible({ timeout: 10000 }).catch(() => false);
+      const hasTable = await page.locator('table').isVisible().catch(() => false);
       if (hasTable) {
         const headers = await page.locator('table th').allTextContents();
         const hasStaffCol = headers.some(h => h.toLowerCase().includes('teacher') || h.toLowerCase().includes('staff'));

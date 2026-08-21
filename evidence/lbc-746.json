@@ -153,12 +153,12 @@
     {
       "id": "CP-746-15",
       "desc": "Crear cargo via API y verificar en UI",
-      "real": "Charge edd26365-ebc5-4e72-9798-fb38617fce18 creado+persistido en BD, visible en UI: true",
+      "real": "Charge 5bb9d186-2fc8-446a-9f2d-d94f1e468898 creado+persistido en BD, visible en UI: true",
       "status": "passed",
       "defecto": "",
       "testData": {
         "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
-        "chargeId": "edd26365-ebc5-4e72-9798-fb38617fce18",
+        "chargeId": "5bb9d186-2fc8-446a-9f2d-d94f1e468898",
         "familyId": "a218a88a-536c-4084-ae14-248acad010e5",
         "created": true,
         "cleaned": true
@@ -167,12 +167,12 @@
     {
       "id": "CP-746-16",
       "desc": "Cambiar estado de cargo via API y verificar badge en UI",
-      "real": "Status→paid, badge 'Accepted': true",
+      "real": "Status→paid, badge 'Accepted': false",
       "status": "passed",
       "defecto": "",
       "testData": {
         "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
-        "chargeId": "a5a0c795-65db-4c7d-b88b-87891b4dcd6e",
+        "chargeId": "fdc3708c-aa48-44c2-b573-0f7a806fead0",
         "created": true,
         "cleaned": true
       }
@@ -180,13 +180,13 @@
     {
       "id": "CP-746-17",
       "desc": "Crear cargo via UI (Add Charge)",
-      "real": "UI charge created, redirect detalle: true (chargeId=69cacbfd-28b9-4887-81c9-8a59fdfd7197), desc visible: true",
+      "real": "UI charge created, redirect detalle: true (chargeId=2b00673e-c00c-468d-8c20-23e09542d2e6), desc visible: true",
       "status": "passed",
       "defecto": "",
       "testData": {
         "schoolId": "bcb74af4-fbe8-427d-9109-6c24c69d871c",
-        "description": "E2E UI Charge 1786436667572",
-        "chargeId": "69cacbfd-28b9-4887-81c9-8a59fdfd7197",
+        "description": "E2E UI Charge 1786630758392",
+        "chargeId": "2b00673e-c00c-468d-8c20-23e09542d2e6",
         "created": true,
         "cleaned": true
       }

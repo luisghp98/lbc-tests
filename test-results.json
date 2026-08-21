@@ -479,6 +479,323 @@
       ]
     },
     {
+      "title": "tests\\billing\\CP-533-01-to-12-payment-experience.spec.js",
+      "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CP-533: Experiencia de Pagos en Web (LBC-533)",
+          "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+          "line": 28,
+          "column": 6,
+          "specs": [
+            {
+              "title": "CP-533-01: La sección Payment Methods lista los 5 métodos con su toggle",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-7e83e415d3270c69c5ec",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "CP-533-02: Desactivar un método y guardar persiste el cambio",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-161bcb517b25be031461",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 80,
+              "column": 3
+            },
+            {
+              "title": "CP-533-03: Sin ningún método activo se muestra el banner de advertencia",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-1234d44fbb2a7c248c19",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 113,
+              "column": 3
+            },
+            {
+              "title": "CP-533-04: Guardar sin métodos activos muestra un toast de advertencia",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-780e0106d3f8304e81fe",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 127,
+              "column": 3
+            },
+            {
+              "title": "CP-533-05: El modal de pago sólo ofrece los métodos habilitados en Settings",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-f0f3d15906211c747e69",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 156,
+              "column": 3
+            },
+            {
+              "title": "CP-533-06: Pago con Check sin banco no se registra",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-e6616ca2ed5f9c05bf13",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 234,
+              "column": 3
+            },
+            {
+              "title": "CP-533-07: Pago con Bank Transfer sin banco no se registra",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-4bf8a60d98ebab8e0655",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 238,
+              "column": 3
+            },
+            {
+              "title": "CP-533-08: Pago con Check y banco completo se registra y persiste el banco",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-feab44838638c70a1522",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 242,
+              "column": 3
+            },
+            {
+              "title": "CP-533-09: El listado de Pagos incluye la columna de banco",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-33f4eef1e197fcd124ef",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 282,
+              "column": 3
+            },
+            {
+              "title": "CP-533-10: El pago con Check muestra su banco en el listado",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-18e61936d6866599bc7f",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 290,
+              "column": 3
+            },
+            {
+              "title": "CP-533-11: El botón Pay está deshabilitado para una factura con cobro recurrente",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-4789c335254ec93a25f1",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 310,
+              "column": 3
+            },
+            {
+              "title": "CP-533-12: Register Payment queda deshabilitado en el historial de la factura recurrente",
+              "ok": true,
+              "tags": [
+                "billing",
+                "settings",
+                "cp-533",
+                "lbc-533"
+              ],
+              "tests": [
+                {
+                  "timeout": 240000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b03281ed4ff907a73c8-6ce8a1f5dabd038ccf69",
+              "file": "tests/billing/CP-533-01-to-12-payment-experience.spec.js",
+              "line": 321,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
       "title": "tests\\billing\\CP-746-01-to-20-billing.spec.js",
       "file": "tests/billing/CP-746-01-to-20-billing.spec.js",
       "column": 0,
@@ -2008,10 +2325,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-08-11T08:12:29.957Z",
-    "duration": 136.57799999999997,
+    "startTime": "2026-08-20T05:08:11.549Z",
+    "duration": 148.20399999999995,
     "expected": 0,
-    "skipped": 82,
+    "skipped": 94,
     "unexpected": 0,
     "flaky": 0
   }

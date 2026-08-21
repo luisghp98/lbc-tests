@@ -62,7 +62,7 @@ test.describe('CP-ONB: Onboarding del Nino (flujo E2E del wizard)', {
 
   test('CP-ONB-04: Acceso al wizard sin sesion redirige a login', async ({ page }) => {
     await page.goto('/admin/children/new');
-    await page.waitForTimeout(3000);
+    await expect(page).toHaveURL(/\/login/);
     await page.screenshot({ path: 'evidence/screenshots/cp-onb-04-no-auth.png', fullPage: true });
     const onLogin = page.url().includes('/login');
     expect(onLogin, 'Sin sesion el wizard debe redirigir a /login').toBeTruthy();

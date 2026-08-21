@@ -1,3 +1,4 @@
+const { expect } = require('@playwright/test');
 const { getFormFieldByLabel } = require('../utils/helpers');
 const { resolveSchoolId, resolveFirstClassroomId } = require('../utils/school');
 
@@ -20,6 +21,12 @@ class OnboardingPage {
   // -------------------------------------------------------------------------
   // Navegación y espera de carga
   // -------------------------------------------------------------------------
+  async _waitForPageReady() {
+    const body = this.page.locator('body');
+    await expect(body).toBeVisible();
+    await expect(body).not.toContainText('Loading...').catch(() => {});
+  }
+
   async goto() {
     // Limpiar datos de sesión previos
     await this.page.evaluate(() => {
@@ -30,11 +37,12 @@ class OnboardingPage {
     const base = url.replace(/\/admin.*$/, '');
     const target = `${base}/admin/children/new`;
 
-    await this.page.goto(target, { timeout: 60000, waitUntil: 'domcontentloaded' });
+    await this.page.goto(target, { waitUntil: 'domcontentloaded' });
+    await this._waitForPageReady();
 
     // Esperar a que el botón "Next: Parent/Guardian" esté visible (indica que el paso 1 está listo)
     const nextBtn = this.page.getByRole('button', { name: /Next: Parent\/Guardian/i });
-    await nextBtn.waitFor({ state: 'visible', timeout: 90000 });
+    await expect(nextBtn).toBeVisible();
     console.log('  Wizard Step 1 ready');
   }
 
@@ -100,7 +108,7 @@ class OnboardingPage {
     }
     // Avanzar al paso 3 (hace clic en "Next: Medical Info")
     const nextBtn = this.page.getByRole('button', { name: /Next: Medical Info/i }).first();
-    await nextBtn.click({ timeout: 10000 });
+    await nextBtn.click();
   }
 
   // -------------------------------------------------------------------------
@@ -137,7 +145,7 @@ class OnboardingPage {
 
     if (govId) {
       const govInput = this.page.locator('input[placeholder="A123"]').first();
-      if (await govInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await govInput.isVisible().catch(() => false)) {
         await govInput.fill(govId);
       }
     }
@@ -152,11 +160,11 @@ class OnboardingPage {
 
   async goNextStep1() {
     const nextBtn = this.page.getByRole('button', { name: /Next: Parent\/Guardian/i });
-    await nextBtn.click({ timeout: 10000 });
+    await nextBtn.click();
 
     // Esperar que el paso 2 se muestre (campo de búsqueda de email)
     const searchInput = this.page.locator('input[placeholder*="email" i]').first();
-    await searchInput.waitFor({ state: 'visible', timeout: 30000 });
+    await searchInput.waitFor({ state: 'visible' });
     console.log('  Step 2 ready');
   }
 
@@ -170,7 +178,7 @@ class OnboardingPage {
     const searchBtn = this.page.getByRole('button', { name: /search/i }).first();
 
     // 1. Esperar que el campo de búsqueda esté visible
-    await searchInput.waitFor({ state: 'visible', timeout: 30000 });
+    await searchInput.waitFor({ state: 'visible' });
 
     // 2. Escribir el email y buscar
     await searchInput.fill(email);
@@ -182,8 +190,8 @@ class OnboardingPage {
 
     // Usar Promise.race para detectar el primero que aparezca
     const result = await Promise.race([
-      this.page.waitForSelector(createSelector, { timeout: 15000 }).then(() => 'create'),
-      this.page.waitForSelector(existingSelector, { timeout: 15000 }).then(() => 'existing')
+      this.page.waitForSelector(createSelector).then(() => 'create'),
+      this.page.waitForSelector(existingSelector).then(() => 'existing')
     ]).catch(() => null);
 
     if (result === 'create') {
@@ -231,12 +239,12 @@ class OnboardingPage {
     const nextBtn = this.page.getByRole('button', { name: /Next: Medical Info/i });
     // Esperar hasta que el botón esté visible y habilitado (si no está visible, puede que ya estemos en step 3)
     try {
-      await nextBtn.waitFor({ state: 'visible', timeout: 5000 });
-      await nextBtn.click({ timeout: 10000 });
+      await nextBtn.waitFor({ state: 'visible' });
+      await nextBtn.click();
     } catch (e) {
       // Si el botón no aparece, podría ser que ya estemos en el paso 3
       const medicalTitle = this.page.locator('h2:has-text("Medical"), h3:has-text("Medical")').first();
-      await medicalTitle.waitFor({ state: 'visible', timeout: 5000 });
+      await medicalTitle.waitFor({ state: 'visible' });
       console.log('  Already on Step 3, skipping');
       return;
     }
@@ -258,8 +266,8 @@ class OnboardingPage {
 
   async goNextStep3() {
     const btn = this.page.getByRole('button', { name: /Next: Enrollment/i });
-    await btn.waitFor({ state: 'visible', timeout: 20000 });
-    await btn.click({ timeout: 10000 });
+    await btn.waitFor({ state: 'visible' });
+    await btn.click();
     console.log('  Advanced to Step 4');
   }
 
@@ -269,9 +277,15 @@ class OnboardingPage {
   async fillStep4({ classroom } = {}) {
     console.log('  Step 4.0: Starting fillStep4');
 
-    console.log('  Step 4.1: Waiting for Complete Enrollment button...');
-    const completeBtn = this.page.getByRole('button', { name: /Complete Enrollment/i });
-    await completeBtn.waitFor({ state: 'visible', timeout: 30000 });
+    console.log('  Step 4.1: Waiting for the enrollment step and submit action...');
+    const step4Signal = this.page.getByText(/Enrollment|Enroll/i).first();
+    const completeBtn = this.page
+      .getByRole('button', { name: /complete enrollment|complete|enroll|submit/i })
+      .or(this.page.locator('button[type="submit"]'))
+      .first();
+
+    await expect(step4Signal).toBeVisible();
+    await expect(completeBtn).toBeVisible();
 
     // --- 1. Select Classroom ---
     console.log('  Step 4.2: Select Classroom...');
@@ -324,7 +338,7 @@ class OnboardingPage {
 
     // --- 5. Sync Products ---
     const syncBtn = this.page.getByRole('button', { name: /sync products/i });
-    if (await syncBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await syncBtn.isVisible().catch(() => false)) {
       await syncBtn.click();
       await this.page.waitForTimeout(1000); // Esperar sincronización
     }
@@ -389,18 +403,21 @@ class OnboardingPage {
   // Submit
   // -------------------------------------------------------------------------
   async submit() {
-    const completeBtn = this.page.getByRole('button', { name: /Complete Enrollment/i }).first();
-    await completeBtn.waitFor({ state: 'visible', timeout: 25000 });
+    const completeBtn = this.page
+      .getByRole('button', { name: /complete enrollment|complete|enroll|submit/i })
+      .or(this.page.locator('button[type="submit"]'))
+      .first();
+    await expect(completeBtn).toBeVisible();
 
     // Verificar si el botón está habilitado
     const isDisabled = await completeBtn.evaluate(b => b.disabled).catch(() => false);
-    console.log('  submit: Complete Enrollment disabled=' + isDisabled);
+    console.log('  submit: enrollment submit button disabled=' + isDisabled);
 
     await completeBtn.click().catch(e => console.log('  submit click error: ' + e.message));
 
     // Esperar a que la URL cambie (redirección a la página del niño)
     try {
-      await this.page.waitForURL(url => !url.includes('/new'), { timeout: 15000 });
+      await this.page.waitForURL(url => !url.includes('/new'));
       console.log('  submit: redirected to ' + this.page.url());
       return true;
     } catch (e) {
@@ -436,10 +453,7 @@ class OnboardingPage {
     if (url.includes('/admin/children/') && !url.includes('/new')) return true;
 
     try {
-      await this.page.waitForFunction(() => {
-        const body = document.body.innerText.toLowerCase();
-        return body.includes('successful') || body.includes('created') || body.includes('child details');
-      }, { timeout: 15000 });
+      await expect(this.page.locator('body')).toContainText(/successful|created|child details/i);
       return true;
     } catch {
       return false;
@@ -448,7 +462,7 @@ class OnboardingPage {
 
   async getChildStatus() {
     try {
-      await this.page.waitForFunction(() => !document.body.innerText.includes('Loading...'), { timeout: 20000 }).catch(() => { });
+      await this._waitForPageReady();
       const txt = (await this.page.innerText('body')).toLowerCase();
       if (txt.includes('pending')) return 'Pending';
       if (txt.includes('active')) return 'Active';
@@ -461,10 +475,7 @@ class OnboardingPage {
 
   async isDuplicateErrorVisible() {
     try {
-      await this.page.waitForFunction(() => {
-        const body = document.body.innerText.toLowerCase();
-        return body.includes('already exists') || body.includes('duplicate');
-      }, { timeout: 10000 });
+      await expect(this.page.locator('body')).toContainText(/already exists|duplicate/i);
       return true;
     } catch {
       return false;

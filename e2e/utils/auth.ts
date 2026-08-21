@@ -25,7 +25,6 @@ export async function loginViaUI(page: Page, user?: string, password?: string) {
   await page.waitForURL('/admin');
 
   // // Opcional: esperar a que algún elemento del dashboard sea visible
-  // await page.getByRole('heading', { name: 'Dashboard' }).waitFor({ timeout: 10000 });
 }
 
 /**

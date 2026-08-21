@@ -28,7 +28,7 @@ class ClassroomPage {
   // -------------------------------------------------------------------------
 
   async gotoNew() {
-    await this.page.goto('/admin/classrooms/new', { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+    await this.page.goto('/admin/classrooms/new', { waitUntil: 'domcontentloaded' }).catch(() => { });
     await this.page.waitForTimeout(2000);
     if (this.page.url().includes('/admin/classrooms/new')) {
       for (let i = 0; i < 45; i++) {
@@ -39,12 +39,12 @@ class ClassroomPage {
       return;
     }
     console.log('  → WARN: Direct /new failed, navigating via list');
-    await this.page.goto('/admin/classrooms', { waitUntil: 'domcontentloaded', timeout: 120000 }).catch(() => {});
+    await this.page.goto('/admin/classrooms', { waitUntil: 'domcontentloaded' }).catch(() => { });
     await this.page.waitForTimeout(3000);
     const addBtn = this.page.locator('a[href="/admin/classrooms/new"]');
-    await addBtn.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
-    await addBtn.click().catch(() => {});
-    await this.page.waitForURL('**/admin/classrooms/new', { timeout: 60000 }).catch(() => {});
+    await addBtn.waitFor({ state: 'visible' }).catch(() => { });
+    await addBtn.click().catch(() => { });
+    await this.page.waitForURL('**/admin/classrooms/new').catch(() => { });
     for (let i = 0; i < 45; i++) {
       const text = await this.page.evaluate(() => document.body.innerText);
       if (!text.includes('Loading')) break;
@@ -64,14 +64,14 @@ class ClassroomPage {
 
   async gotoEdit(classroomId) {
     await this.page.goto(`/admin/classrooms/${classroomId}`);
-    await this.page.waitForFunction(() => !document.body.innerText.includes('Loading'), { timeout: 60000 }).catch(() => {});
-    await this.page.waitForSelector('h1:has-text("Classroom")', { timeout: 30000 });
+    await this.page.waitForFunction(() => !document.body.innerText.includes('Loading')).catch(() => { });
+    await this.page.waitForSelector('h1:has-text("Classroom")');
     await this.page.getByRole('link', { name: /edit classroom/i }).click();
-    await this.page.waitForURL(`**/admin/classrooms/${classroomId}/edit`, { timeout: 15000 }).catch(() => {});
+    await this.page.waitForURL(`**/admin/classrooms/${classroomId}/edit`).catch(() => { });
     await this.page.waitForFunction((id) => {
-      return document.body.innerText.includes('Classroom Name') || 
-             document.location.href.includes('/edit');
-    }, classroomId, { timeout: 30000 });
+      return document.body.innerText.includes('Classroom Name') ||
+        document.location.href.includes('/edit');
+    }, classroomId);
     await this.page.waitForTimeout(1500);
   }
 
@@ -266,18 +266,18 @@ class ClassroomPage {
       const url = this.page.url();
       const onList = url.includes('/admin/classrooms') && !url.includes('/new');
       if (onList) {
-        const errorToast = await this.page.locator('.error-toast, .alert-error, [data-sonner-toast][data-type="error"]').first().isVisible({ timeout: 1000 }).catch(() => false);
+        const errorToast = await this.page.locator('.error-toast, .alert-error, [data-sonner-toast][data-type="error"]').first().isVisible().catch(() => false);
         expect(errorToast).toBeFalsy();
         return;
       }
-      const successToast = await this.page.locator('[data-sonner-toast][data-type="success"], [data-sonner-toast]:has-text("success"), [data-sonner-toast]:has-text("created")').first().isVisible({ timeout: 2000 }).catch(() => false);
+      const successToast = await this.page.locator('[data-sonner-toast][data-type="success"], [data-sonner-toast]:has-text("success"), [data-sonner-toast]:has-text("created"]').first().isVisible().catch(() => false);
       expect(successToast).toBeTruthy();
-    }).toPass({ timeout: 30000 });
+    }).toPass();
     return null;
   }
 
   async expectValidationError() {
-    await expect(this.page).toHaveURL(/\/new$/, { timeout: 5000 });
+    await expect(this.page).toHaveURL(/\/new$/);
   }
 
   // -------------------------------------------------------------------------
@@ -292,7 +292,7 @@ class ClassroomPage {
       return null;
     }
     try {
-      const payload = JSON.parse(Buffer.from(authCookie.value.replace('base64-',''), 'base64').toString());
+      const payload = JSON.parse(Buffer.from(authCookie.value.replace('base64-', ''), 'base64').toString());
       return payload.access_token;
     } catch (e) {
       console.log('  → Error decoding auth cookie:', e.message);
@@ -320,10 +320,10 @@ class ClassroomPage {
     const apiId = await this.verifyCreationByAPI(name);
     if (apiId) return apiId;
     await this.page.goto('/admin/classrooms');
-    await this.page.waitForFunction(() => !document.body.innerText.includes('Loading'), { timeout: 120000 }).catch(() => {});
+    await this.page.waitForFunction(() => !document.body.innerText.includes('Loading')).catch(() => { });
     await this.page.waitForTimeout(3000);
     const searchBox = this.page.locator('input[placeholder*="Search"]');
-    if (await searchBox.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await searchBox.isVisible().catch(() => false)) {
       await searchBox.fill(name);
       await this.page.waitForTimeout(3000);
     }

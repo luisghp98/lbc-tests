@@ -4,7 +4,7 @@ const { loginViaUI } = require('../../utils/auth');
 test('Inspect Level select options', async ({ page }) => {
   await loginViaUI(page);
   await page.goto('/admin/classrooms/new');
-  await page.waitForFunction(() => !document.body.innerText.includes('Loading'), { timeout: 60000 });
+  await page.waitForFunction(() => !document.body.innerText.includes('Loading'));
 
   const selects = await page.locator('select').all();
   console.log(`Found ${selects.length} select elements`);
