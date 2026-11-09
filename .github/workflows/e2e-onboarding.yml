@@ -1,0 +1,32 @@
+name: E2E onboarding (preprod)
+
+# Manual: las pruebas escriben datos QA- en preprod y los retiran al final.
+# Repo público: no se suben artefactos ni se corren las @seguridad (sus fallos quedarían en logs públicos).
+on:
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: Filtro de pruebas (opcional, ej. CP-ONB-01)
+        required: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASE_URL: https://prelbc.juvomos.com
+      API_BASE_URL: https://api.presupbase.juvomos.com
+      TIMEOUT_FACTOR: '2'
+      USER: ${{ secrets.LBC_USER }}
+      PASSWORD: ${{ secrets.LBC_PASSWORD }}
+      API_KEY: ${{ secrets.LBC_API_KEY }}
+      GREP: ${{ inputs.grep }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test e2e/tests/onboarding --grep-invert "@seguridad" --reporter=list ${GREP:+--grep "$GREP"}

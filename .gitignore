@@ -8,3 +8,8 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 /e2e/screenshots/
+
+# Hallazgos internos y volcados de preprod: no publicar (repo público)
+/LBC-1702_test_cases.md
+/evidence/exploration/
+/e2e/exploration/
