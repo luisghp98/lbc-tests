@@ -27,6 +27,13 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Comprobar secretos (solo dice si existen)
+        run: |
+          faltan=""
+          [ -n "$USER" ] || faltan="$faltan LBC_USER"
+          [ -n "$PASSWORD" ] || faltan="$faltan LBC_PASSWORD"
+          [ -n "$API_KEY" ] || faltan="$faltan LBC_API_KEY"
+          if [ -n "$faltan" ]; then echo "::error::Faltan estos secretos del repositorio (Settings > Secrets and variables > Actions):$faltan"; exit 1; fi
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test e2e/tests/onboarding --grep-invert "@seguridad" --reporter=list ${GREP:+--grep "$GREP"}
