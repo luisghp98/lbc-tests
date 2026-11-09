@@ -111,6 +111,16 @@ class OnboardingPage {
     await this.page.getByRole('checkbox', { name: /All Required Documents Submitted/ }).check();
   }
 
+  /** Empieza a recoger errores de consola y respuestas fallidas (para diagnosticar). */
+  vigilar() {
+    this.problemas = [];
+    const anotar = (t) => { if (this.problemas.length < 25 && !this.problemas.includes(t)) this.problemas.push(t); };
+    const ruta = (u) => { try { return new URL(u).pathname; } catch { return u.slice(0, 60); } };
+    this.page.on('console', (m) => { if (m.type() === 'error') anotar(`consola: ${m.text().slice(0, 160)}`); });
+    this.page.on('response', (r) => { if (r.status() >= 400) anotar(`${r.status()} ${r.request().method()} ${ruta(r.url())}`); });
+    this.page.on('requestfailed', (r) => anotar(`falló ${r.method()} ${ruta(r.url())} ${r.failure() ? r.failure().errorText : ''}`));
+  }
+
   /** Envía el registro. El niño se localiza por API (la app no siempre redirige al detalle). */
   async completar() {
     await this.page.getByRole('button', { name: 'Complete Enrollment' }).click();

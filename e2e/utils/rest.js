@@ -25,9 +25,9 @@ function requestOnce(pathname, { method = 'GET', headers = {}, body } = {}) {
   });
 }
 
-// Conexión lenta: las lecturas (GET) se reintentan; las escrituras no, para no duplicar datos.
+// Conexión lenta: las lecturas (GET) y lo marcado `reintentar` (p. ej. el login) se reintentan; las escrituras no, para no duplicar datos.
 async function request(pathname, opts = {}) {
-  const intentos = (opts.method || 'GET') === 'GET' ? 3 : 1;
+  const intentos = (opts.method || 'GET') === 'GET' || opts.reintentar ? 3 : 1;
   for (let i = 1; ; i++) {
     try {
       return await requestOnce(pathname, opts);
@@ -44,7 +44,7 @@ async function asUser(email = process.env.USER, password = process.env.PASSWORD)
   const cached = tokens.get(email);
   if (!cached || cached.expiresAt < Date.now() + 60_000) {
     const res = await request('/auth/v1/token?grant_type=password', {
-      method: 'POST',
+      method: 'POST', reintentar: true,
       headers: { apikey, 'Content-Type': 'application/json' },
       body: { email, password },
     });
