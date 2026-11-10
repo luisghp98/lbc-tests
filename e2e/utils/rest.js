@@ -3,9 +3,9 @@ const https = require('https');
 const API_HOST = () => process.env.API_BASE_URL || 'https://api.presupbase.juvomos.com';
 const tokens = new Map();
 
-function requestOnce(pathname, { method = 'GET', headers = {}, body } = {}) {
+function requestOnce(pathname, { method = 'GET', headers = {}, body, timeoutMs = 120_000 } = {}) {
   return new Promise((resolve, reject) => {
-    const data = body === undefined ? null : Buffer.from(typeof body === 'string' ? body : JSON.stringify(body));
+    const data = body === undefined ? null : Buffer.isBuffer(body) ? body : Buffer.from(typeof body === 'string' ? body : JSON.stringify(body));
     const req = https.request(API_HOST() + pathname, {
       method,
       headers: { ...headers, ...(data ? { 'Content-Length': data.length } : {}) },
@@ -19,7 +19,7 @@ function requestOnce(pathname, { method = 'GET', headers = {}, body } = {}) {
       });
     });
     req.on('error', reject);
-    req.setTimeout(120_000, () => req.destroy(new Error(`timeout ${method} ${pathname}`)));
+    req.setTimeout(timeoutMs, () => req.destroy(new Error(`timeout ${method} ${pathname}`)));
     if (data) req.write(data);
     req.end();
   });
