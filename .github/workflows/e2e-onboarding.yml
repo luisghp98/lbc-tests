@@ -34,6 +34,11 @@ jobs:
           [ -n "$PASSWORD" ] || faltan="$faltan LBC_PASSWORD"
           [ -n "$API_KEY" ] || faltan="$faltan LBC_API_KEY"
           if [ -n "$faltan" ]; then echo "::error::Faltan estos secretos del repositorio (Settings > Secrets and variables > Actions):$faltan"; exit 1; fi
+      - name: Diagnóstico de credenciales (sin mostrar valores)
+        run: |
+          echo "usuario: dominio=${USER#*@} largo=${#USER}"
+          echo "contraseña: largo=${#PASSWORD}"
+          echo "api key: largo=${#API_KEY} empieza_por=${API_KEY:0:3}"
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test e2e/tests/onboarding --grep-invert "@seguridad" --reporter=list ${GREP:+--grep "$GREP"}
