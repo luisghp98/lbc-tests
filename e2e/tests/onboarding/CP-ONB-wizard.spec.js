@@ -174,16 +174,31 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     console.log(`[CP-ONB-06] iframes en el paso 2 con ACH: ${JSON.stringify(marcos)}`);
   });
 
-  // Pendiente: en el navegador automatizado el detalle del niño no termina de cargar (el POST de refresh del token queda colgado).
-  test('CP-ONB-07: el detalle del niño muestra el informe con las 5 secciones', async () => {
-    test.fixme(!process.env.CI, 'Solo se ejecuta en CI: el detalle /admin/children/:id no carga en el navegador automatizado: refresh del token colgado');
-    test.skip(!ultimoNinoId, 'Requiere el niño creado por CP-ONB-04');
+  // El informe del punto 6 es el detalle del niño. Solo se ejecuta en CI: en local la sesión del navegador automatizado se cae.
+  const seccionesDelDetalle = async () => {
     await page.goto(`/admin/children/${ultimoNinoId}`);
     await expect(page.locator('main'), 'el detalle del niño debe cargar').toContainText('QA-Lbc-', { timeout: SLOW });
-    const secciones = await page.locator('main h1, main h2, main h3, main h4').allInnerTexts();
-    console.log(`[CP-ONB-07] secciones del detalle: ${JSON.stringify(secciones.map((t) => t.trim()).filter(Boolean))}`);
-    const texto = (await page.locator('main').innerText()).replace(/\s+/g, ' ');
-    console.log(`[CP-ONB-07] texto del detalle: ${texto.slice(0, 1800)}`);
-    expect(secciones.length, 'el detalle debe mostrar secciones').toBeGreaterThan(0);
+    return (await page.locator('main h1, main h2, main h3, main h4').allInnerTexts()).map((t) => t.trim()).filter(Boolean);
+  };
+
+  test('CP-ONB-07: el detalle del niño muestra las secciones del informe', async () => {
+    test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
+    test.skip(!ultimoNinoId, 'Requiere el niño creado por CP-ONB-04');
+    const secciones = await seccionesDelDetalle();
+    for (const s of ['Basic Information', 'Medical Information', 'Family Information', 'Enrollment Information', 'Billing Contact']) {
+      expect(secciones, `falta la sección ${s}`).toContain(s);
+    }
+  });
+
+  test('CP-ONB-08: el informe sigue el orden y el contenido pedidos en el ticket', async () => {
+    test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
+    test.skip(!ultimoNinoId, 'Requiere el niño creado por CP-ONB-04');
+    test.fail(true, 'Hallazgo 9 nov: el detalle no sigue el orden del ticket (básica, médica, padre, enrolamiento, facturación) ni muestra forzamiento, método de pago ni autorización de recurrencia');
+    const secciones = await seccionesDelDetalle();
+    const posiciones = ['Basic Information', 'Medical Information', 'Family Information', 'Enrollment Information'].map((t) => secciones.indexOf(t));
+    expect(posiciones, 'orden de las secciones: básica, médica, padre, enrolamiento').toEqual([...posiciones].sort((a, b) => a - b));
+    const texto = await page.locator('main').evaluate((el) => el.textContent);
+    expect(texto, 'forzamiento activo/inactivo en el enrolamiento').toMatch(/forzamiento|enforce|enforcement/i);
+    expect(texto, 'método de pago y autorización de recurrencia en la facturación').toMatch(/recurring payment|autorizaci/i);
   });
 });
