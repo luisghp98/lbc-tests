@@ -179,7 +179,11 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     test.fixme(!process.env.CI, 'Solo se ejecuta en CI: el detalle /admin/children/:id no carga en el navegador automatizado: refresh del token colgado');
     test.skip(!ultimoNinoId, 'Requiere el niño creado por CP-ONB-04');
     await page.goto(`/admin/children/${ultimoNinoId}`);
-    const secciones = await page.locator('main h1, main h2, main h3').allInnerTexts();
+    await expect(page.locator('main'), 'el detalle del niño debe cargar').toContainText('QA-Lbc-', { timeout: SLOW });
+    const secciones = await page.locator('main h1, main h2, main h3, main h4').allInnerTexts();
     console.log(`[CP-ONB-07] secciones del detalle: ${JSON.stringify(secciones.map((t) => t.trim()).filter(Boolean))}`);
+    const texto = (await page.locator('main').innerText()).replace(/\s+/g, ' ');
+    console.log(`[CP-ONB-07] texto del detalle: ${texto.slice(0, 1800)}`);
+    expect(secciones.length, 'el detalle debe mostrar secciones').toBeGreaterThan(0);
   });
 });
