@@ -116,7 +116,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   });
 
   test('CP-ONB-04: registro con foto de 4,9 MiB: la foto se guarda en el servidor', async () => {
-    test.fixme(true, 'Sin verificar: tras el registro el navegador automatizado pierde la renovación del token (POST /auth/v1/token abortado) y la foto no llega a guardarse; confirmar a mano.');
+    test.fixme(!process.env.CI, 'Solo se ejecuta en CI: tras el registro el navegador automatizado pierde la renovación del token (POST /auth/v1/token abortado) y la foto no llega a guardarse; confirmar a mano.');
     const onb = new OnboardingPage(page);
     const nino = qaChild();
     onb.vigilar();
@@ -176,7 +176,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
 
   // Pendiente: en el navegador automatizado el detalle del niño no termina de cargar (el POST de refresh del token queda colgado).
   test('CP-ONB-07: el detalle del niño muestra el informe con las 5 secciones', async () => {
-    test.fixme(true, 'El detalle /admin/children/:id no carga en el navegador automatizado: refresh del token colgado');
+    test.fixme(!process.env.CI, 'Solo se ejecuta en CI: el detalle /admin/children/:id no carga en el navegador automatizado: refresh del token colgado');
     test.skip(!ultimoNinoId, 'Requiere el niño creado por CP-ONB-04');
     await page.goto(`/admin/children/${ultimoNinoId}`);
     const secciones = await page.locator('main h1, main h2, main h3').allInnerTexts();
