@@ -56,7 +56,10 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     await onb.siguiente('Next: Enrollment');
     await onb.matricula({ aula: 'habilitada' });
 
+    const envio = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/admin/children/new'), { timeout: SLOW });
     await onb.completar();
+    await envio;
+    await page.waitForURL(/\/admin\/children\/[0-9a-f-]{36}/, { timeout: 120_000 });
     const buscar = async () => (await rest('children', { headers, query: `last_name=eq.${nino.lastName}&select=id` })).json || [];
     await expect.poll(async () => (await buscar()).length, { timeout: SLOW, message: 'el niño debe crearse' }).toBe(1);
     const id = (await buscar())[0].id;
@@ -65,8 +68,9 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
 
     const hijo = await rest('children', { headers, query: `id=eq.${id}&select=id,first_name,last_name,status` });
     expect(hijo.json[0].last_name).toBe(nino.lastName);
-    const matriculas = await rest('enrollments', { headers, query: `child_id=eq.${id}&select=*` });
-    expect(matriculas.json.length, 'el niño debe tener matrícula').toBeGreaterThan(0);
+    const leerMatriculas = async () => (await rest('enrollments', { headers, query: `child_id=eq.${id}&select=*` })).json || [];
+    await expect.poll(async () => (await leerMatriculas()).length, { timeout: 60_000, message: 'el niño debe tener matrícula' }).toBeGreaterThan(0);
+    const matriculas = { json: await leerMatriculas() };
     const facturas = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=id,status,total_amount,recurring_payment_method_id` })).json || [];
     await expect.poll(async () => (await facturas()).length, { timeout: 120_000, message: 'se crea la factura de onboarding' }).toBeGreaterThan(0);
     expect(Number((await facturas())[0].total_amount), 'la factura tiene importe').toBeGreaterThan(0);
