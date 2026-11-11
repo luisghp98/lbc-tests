@@ -42,6 +42,8 @@ class QaCleanup {
     }
     await rest('child_financial_responsibles', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
     await rest('child_families', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
+    // La matrícula del aula ocupa cupo y activa el ratio: se retira (status withdrawn), igual que la suite anterior.
+    await rest('classroom_enrollments', { method: 'PATCH', headers, query: `child_id=eq.${id}&status=eq.active`, body: { status: 'withdrawn' } });
     // Las matrículas no se pueden borrar: el niño se da de baja y se oculta (mismo patrón que la suite anterior).
     const today = new Date().toISOString().slice(0, 10);
     const res = await rest('children', {
@@ -49,6 +51,14 @@ class QaCleanup {
       body: { status: 'inactive', deleted_at: new Date().toISOString(), withdrawal_date: today },
     });
     return res.status < 300;
+  }
+
+  /** Retira las matrículas activas de niños QA de corridas anteriores (liberan cupo en las aulas). */
+  async purgarMatriculas(headers) {
+    const activas = await rest('classroom_enrollments', { headers, query: 'status=eq.active&select=id,child:children(first_name,last_name)' });
+    const mias = (activas.json || []).filter((e) => e.child && (e.child.first_name === 'QA-Child' || String(e.child.last_name).startsWith('QA-')));
+    for (const e of mias) await rest('classroom_enrollments', { method: 'PATCH', headers, query: `id=eq.${e.id}`, body: { status: 'withdrawn' } });
+    console.log(`[QA matrículas] retiradas: ${mias.length}`);
   }
 
   /** Borra lo registrado por este run. */
@@ -64,6 +74,7 @@ class QaCleanup {
     const left = await rest('children', { headers, query: `last_name=ilike.${QA_PREFIX}*&deleted_at=is.null&select=id` });
     for (const c of left.json || []) await this.removeChild(headers, c.id);
     console.log(`[QA sweep] restos retirados: ${(left.json || []).length}`);
+    await this.purgarMatriculas(headers);
   }
 }
 
