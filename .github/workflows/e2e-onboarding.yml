@@ -8,6 +8,10 @@ on:
       grep:
         description: Filtro de pruebas (opcional, ej. CP-ONB-01)
         required: false
+      grep_invert:
+        description: Pruebas a excluir (por defecto las @seguridad; pon NINGUNA para incluirlas)
+        required: false
+        default: '@seguridad'
 
 jobs:
   e2e:
@@ -21,6 +25,7 @@ jobs:
       PASSWORD: ${{ secrets.LBC_PASSWORD }}
       API_KEY: ${{ secrets.LBC_API_KEY }}
       GREP: ${{ inputs.grep }}
+      GREP_INVERT: ${{ inputs.grep_invert }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,4 +46,4 @@ jobs:
           echo "api key: largo=${#API_KEY} empieza_por=${API_KEY:0:3}"
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test e2e/tests/onboarding --grep-invert "@seguridad" --reporter=list ${GREP:+--grep "$GREP"}
+      - run: npx playwright test e2e/tests/onboarding ${GREP_INVERT:+--grep-invert "$GREP_INVERT"} --reporter=list ${GREP:+--grep "$GREP"}

@@ -8,6 +8,9 @@ const { png, desdeNavegador, archivo } = require('../../utils/imagen');
 
 const MB = 1024 * 1024;
 const enDias = (n) => new Date(Date.now() + n * 86400000);
+const ymd = (d) => d.toLocaleDateString('en-CA');
+const MESES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const etiquetaDia = (d) => `${MESES[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 const haceAnios = (n) => { const d = new Date(); d.setFullYear(d.getFullYear() - n); return d; };
 
 test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, () => {
@@ -63,9 +66,22 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     expect(hijo.json[0].last_name).toBe(nino.lastName);
     const matriculas = await rest('enrollments', { headers, query: `child_id=eq.${id}&select=*` });
     expect(matriculas.json.length, 'el niño debe tener matrícula').toBeGreaterThan(0);
-    const facturas = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=id,status,total_amount` })).json || [];
+    const facturas = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=id,status,total_amount,recurring_payment_method_id` })).json || [];
     await expect.poll(async () => (await facturas()).length, { timeout: 120_000, message: 'se crea la factura de onboarding' }).toBeGreaterThan(0);
     expect(Number((await facturas())[0].total_amount), 'la factura tiene importe').toBeGreaterThan(0);
+
+    // Punto 1: el niño queda asociado al tipo de enrolamiento elegido (Full Time).
+    const tipo = (await rest('enrollment_types', { headers, query: `name=eq.${encodeURIComponent('Full Time')}&deleted_at=is.null&select=id` })).json[0];
+    expect(matriculas.json[0].enrollment_type_id, 'la matrícula debe quedar con el tipo de enrolamiento elegido').toBe(tipo.id);
+
+    // Punto 2: la medicación se guarda con fecha inicio (hoy) y fecha fin (mañana).
+    const medicacion = (await rest('medications', { headers, query: `child_id=eq.${id}&select=start_date,end_date` })).json || [];
+    expect(medicacion.length, 'debe guardarse la medicación').toBe(1);
+    expect(medicacion[0].start_date).toBe(ymd(enDias(0)));
+    expect(medicacion[0].end_date).toBe(ymd(enDias(1)));
+
+    // Punto 5: sin autorización de débito recurrente, la factura queda sin método de pago asociado.
+    expect((await facturas())[0].recurring_payment_method_id, 'sin recurrencia, la factura no se asocia a un método de pago').toBeNull();
   });
 
   test('CP-ONB-02: aulas sin personal o con personal sin presencia quedan cerradas en el paso 4', async () => {
@@ -148,18 +164,32 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     fotoGuardada = String(await foto());
   });
 
-  // Seguridad: salta el tope del cliente y sube directo al almacenamiento (el bucket sale de la URL de CP-ONB-04).
+  // Seguridad: salta el tope del cliente y sube directo al almacenamiento, en la carpeta de la foto del niño (así se puede borrar).
   test('CP-ONB-05: el almacenamiento rechaza fotos de más de 5 MiB subidas directo', { tag: '@seguridad' }, async () => {
     test.skip(!fotoGuardada, 'Requiere la foto guardada por CP-ONB-04');
-    const m = fotoGuardada.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)?\/?([^/?]+)\//);
-    test.skip(!m, `No se pudo deducir el bucket de la URL: ${fotoGuardada.slice(0, 80)}`);
-    const grande = png(6 * MB);
-    const res = await request(`/storage/v1/object/${m[1]}/qa-lbc1702-${Date.now()}.png`, {
-      method: 'POST', body: grande,
-      headers: { ...headers, 'Content-Type': 'image/png', 'Content-Length': grande.length, 'x-upsert': 'false' },
-    });
-    if (res.status < 300) console.log(`[CP-ONB-05] el servidor aceptó 6 MiB en el bucket ${m[1]}`);
-    expect(res.status, 'el servidor debe imponer el tope de 5 MiB').toBeGreaterThanOrEqual(400);
+    const m = fotoGuardada.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)?\/?([^/?]+)\/([^?]+)$/);
+    test.skip(!m, 'No se pudo deducir el bucket de la URL de la foto');
+    const [, bucket, ruta] = m;
+    const carpeta = ruta.slice(0, ruta.lastIndexOf('/'));
+    const subidos = [];
+    const subir = async (bytes) => {
+      const cuerpo = png(bytes);
+      const nombre = `${carpeta}/qa-lbc1702-${Date.now()}.png`;
+      const res = await request(`/storage/v1/object/${bucket}/${nombre}`, {
+        method: 'POST', body: cuerpo, timeoutMs: 400_000,
+        headers: { ...headers, 'Content-Type': 'image/png', 'x-upsert': 'false' },
+      });
+      if (res.status < 300) subidos.push(nombre);
+      return res.status;
+    };
+    try {
+      expect(await subir(1 * MB), 'control: una foto de 1 MiB debe poder subirse').toBeLessThan(300);
+      const resultados = { '5,1 MiB': await subir(5.1 * MB), '6 MiB': await subir(6 * MB) };
+      const aceptadas = Object.entries(resultados).filter(([, st]) => st < 300).map(([k]) => k);
+      expect(aceptadas, 'el servidor debe rechazar fotos de más de 5 MiB').toEqual([]);
+    } finally {
+      if (subidos.length) await request(`/storage/v1/object/${bucket}`, { method: 'DELETE', headers: { ...headers, 'Content-Type': 'application/json' }, body: { prefixes: subidos } });
+    }
   });
 
   test('CP-ONB-06: ACH queda disponible en el paso 2 cuando el colegio tiene NMI', async () => {
@@ -200,5 +230,55 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     const texto = await page.locator('main').evaluate((el) => el.textContent);
     expect(texto, 'forzamiento activo/inactivo en el enrolamiento').toMatch(/forzamiento|enforce|enforcement/i);
     expect(texto, 'método de pago y autorización de recurrencia en la facturación').toMatch(/recurring payment|autorizaci/i);
+  });
+
+  test('CP-ONB-09: el selector de fechas de medicación no admite fechas pasadas ni un fin anterior al inicio', async () => {
+    const onb = new OnboardingPage(page);
+    await onb.goto();
+    await onb.datosNino({ ...qaChild(), nacimiento: haceAnios(4) });
+    await onb.siguiente('Next: Family Member');
+    await onb.familiarNuevo(qaEmail());
+    await onb.siguiente('Next: Medical Info');
+    const dia = (d) => page.getByRole('button', { name: etiquetaDia(d), exact: true });
+    const hoy = enDias(0);
+
+    await page.locator('button', { hasText: 'Select date' }).nth(0).click();
+    if (hoy.getDate() > 1) await expect(dia(enDias(-1)), 'ayer no se puede elegir como inicio').toBeDisabled();
+    await expect(dia(hoy), 'hoy sí se puede elegir como inicio').toBeEnabled();
+    await dia(enDias(3)).click();
+
+    await page.locator('button', { hasText: 'Select date' }).first().click();
+    await expect(dia(enDias(2)), 'un fin anterior al inicio no se puede elegir').toBeDisabled();
+    await expect(dia(enDias(3)), 'fin igual al inicio sí es válido').toBeEnabled();
+  });
+
+  // Punto 5 con un método sin datos sensibles: autorización de recurrencia activa con Cash.
+  test('CP-ONB-10: con la autorización de recurrencia activa, la factura queda asociada al método de pago', async () => {
+    test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
+    const onb = new OnboardingPage(page);
+    const nino = qaChild();
+    await onb.goto();
+    await onb.datosNino({ ...nino, nacimiento: haceAnios(4) });
+    await onb.siguiente('Next: Family Member');
+    await onb.familiarNuevo(qaEmail());
+    await onb.metodoPago('Cash');
+    await page.getByText('Recurring Payment Authorization').first().click();
+    await onb.siguiente('Next: Medical Info');
+    await onb.siguiente('Next: Enrollment');
+    await onb.matricula({ aula: 'habilitada' });
+    await onb.completar();
+
+    const buscar = async () => (await rest('children', { headers, query: `last_name=eq.${nino.lastName}&select=id` })).json || [];
+    await expect.poll(async () => (await buscar()).length, { timeout: SLOW }).toBe(1);
+    const id = (await buscar())[0].id;
+    limpieza.trackChild(id);
+
+    const factura = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=id,recurring_payment_method_id,family_id` })).json || [];
+    await expect.poll(async () => (await factura()).length, { timeout: 120_000, message: 'se crea la factura de onboarding' }).toBeGreaterThan(0);
+    const f = (await factura())[0];
+    const metodos = (await rest('payment_methods', { headers, query: `family_id=eq.${f.family_id}&select=id,type,is_recurring_enabled,is_active` })).json || [];
+    console.log(`[CP-ONB-10] métodos de la familia: ${JSON.stringify(metodos)}; factura.recurring_payment_method_id: ${f.recurring_payment_method_id}`);
+    expect(metodos.some((x) => x.is_recurring_enabled), 'el método guardado debe quedar con la recurrencia habilitada').toBeTruthy();
+    expect(f.recurring_payment_method_id, 'la factura debe quedar asociada al método de pago').toBeTruthy();
   });
 });
