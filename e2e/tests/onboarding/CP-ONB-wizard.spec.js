@@ -174,6 +174,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   // Seguridad: salta el tope del cliente y sube directo al almacenamiento, en la carpeta de la foto del niño (así se puede borrar).
   test('CP-ONB-05: el almacenamiento rechaza fotos de más de 5 MiB subidas directo', { tag: '@seguridad' }, async () => {
     test.skip(!fotoGuardada, 'Requiere la foto guardada por CP-ONB-04');
+    test.fail(true, 'Hallazgo 11 nov: el servidor acepta fotos de 5,1 y 6 MiB subidas directo; el tope de 5 MB solo existe en el formulario');
     const m = fotoGuardada.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)?\/?([^/?]+)\/([^?]+)$/);
     test.skip(!m, 'No se pudo deducir el bucket de la URL de la foto');
     const [, bucket, ruta] = m;
