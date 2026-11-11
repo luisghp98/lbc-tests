@@ -52,6 +52,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     await onb.familiarNuevo(qaEmail());
     await onb.siguiente('Next: Medical Info');
     await onb.medicacion({ nombre: 'QA-Medicina', inicio: enDias(0), fin: enDias(1) });
+    await expect(page.getByText('QA-Medicina').first(), 'la medicación añadida debe aparecer en la lista del paso 3').toBeVisible();
     await onb.siguiente('Next: Enrollment');
     await onb.matricula({ aula: 'habilitada' });
 
@@ -75,8 +76,9 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     expect(matriculas.json[0].enrollment_type_id, 'la matrícula debe quedar con el tipo de enrolamiento elegido').toBe(tipo.id);
 
     // Punto 2: la medicación se guarda con fecha inicio (hoy) y fecha fin (mañana).
-    const medicacion = (await rest('medications', { headers, query: `child_id=eq.${id}&select=start_date,end_date` })).json || [];
-    expect(medicacion.length, 'debe guardarse la medicación').toBe(1);
+    const leerMedicacion = async () => (await rest('medications', { headers, query: `child_id=eq.${id}&select=start_date,end_date` })).json || [];
+    await expect.poll(async () => (await leerMedicacion()).length, { timeout: 60_000, message: 'debe guardarse la medicación del niño' }).toBe(1);
+    const medicacion = await leerMedicacion();
     expect(medicacion[0].start_date).toBe(ymd(enDias(0)));
     expect(medicacion[0].end_date).toBe(ymd(enDias(1)));
 
@@ -255,6 +257,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   // Punto 5 con un método sin datos sensibles: autorización de recurrencia activa con Cash.
   test('CP-ONB-10: con la autorización de recurrencia activa, la factura queda asociada al método de pago', async () => {
     test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
+    test.fail(true, 'Hallazgo 11 nov: con Cash y la autorización de recurrencia activa no se guarda ningún método de pago y la factura no se asocia (a confirmar con desarrollo si Cash debería permitir la casilla)');
     const onb = new OnboardingPage(page);
     const nino = qaChild();
     await onb.goto();
