@@ -271,35 +271,23 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     await expect(dia(enDias(3)), 'fin igual al inicio sí es válido').toBeEnabled();
   });
 
-  // Punto 5 con un método sin datos sensibles: autorización de recurrencia activa con Cash.
-  test('CP-ONB-10: con la autorización de recurrencia activa, la factura queda asociada al método de pago', async () => {
-    test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
-    test.fail(true, 'Hallazgo 11 nov: con Cash y la autorización de recurrencia activa no se guarda ningún método de pago y la factura no se asocia (a confirmar con desarrollo si Cash debería permitir la casilla)');
+  // Punto 5: la autorización de débito recurrente solo tiene sentido con Card y ACH. Solo se elige el método, no se escribe ningún dato.
+  test('CP-ONB-10: la casilla de autorización recurrente solo se muestra con Card y ACH', async () => {
+    test.fail(true, 'Hallazgo 12 nov: la casilla también se muestra con Cash, Check y Bank Transfer');
     const onb = new OnboardingPage(page);
-    const nino = qaChild();
     await onb.goto();
-    await onb.datosNino({ ...nino, nacimiento: haceAnios(4) });
+    await onb.datosNino({ ...qaChild(), nacimiento: haceAnios(4) });
     await onb.siguiente('Next: Family Member');
     await onb.familiarNuevo(qaEmail());
-    await onb.metodoPago('Cash');
-    await page.getByText('Recurring Payment Authorization').first().click();
-    await onb.siguiente('Next: Medical Info');
-    await onb.siguiente('Next: Enrollment');
-    await onb.matricula({ aula: 'habilitada' });
-    await onb.completar();
-
-    const buscar = async () => (await rest('children', { headers, query: `last_name=eq.${nino.lastName}&select=id` })).json || [];
-    await expect.poll(async () => (await buscar()).length, { timeout: SLOW }).toBe(1);
-    const id = (await buscar())[0].id;
-    limpieza.trackChild(id);
-
-    const factura = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=id,recurring_payment_method_id,family_id` })).json || [];
-    await expect.poll(async () => (await factura()).length, { timeout: 120_000, message: 'se crea la factura de onboarding' }).toBeGreaterThan(0);
-    const f = (await factura())[0];
-    const metodos = (await rest('payment_methods', { headers, query: `family_id=eq.${f.family_id}&select=id,type,is_recurring_enabled,is_active` })).json || [];
-    console.log(`[CP-ONB-10] métodos de la familia: ${JSON.stringify(metodos)}; factura.recurring_payment_method_id: ${f.recurring_payment_method_id}`);
-    expect(metodos.some((x) => x.is_recurring_enabled), 'el método guardado debe quedar con la recurrencia habilitada').toBeTruthy();
-    expect(f.recurring_payment_method_id, 'la factura debe quedar asociada al método de pago').toBeTruthy();
+    const casilla = page.getByText('Recurring Payment Authorization').first();
+    const visibles = {};
+    for (const metodo of ['Card', 'ACH', 'Cash', 'Check', 'Bank Transfer']) {
+      await onb.metodoPago(metodo);
+      visibles[metodo] = await casilla.isVisible();
+    }
+    console.log(`[CP-ONB-10] casilla visible por método: ${JSON.stringify(visibles)}`);
+    expect(visibles.Card && visibles.ACH, 'con Card y ACH debe mostrarse').toBeTruthy();
+    expect([visibles.Cash, visibles.Check, visibles['Bank Transfer']], 'con Cash, Check y Bank Transfer no debe mostrarse').toEqual([false, false, false]);
   });
 
   // Informativa: revisa un niño concreto (CHILD_ID) y dice qué aparece, sin imprimir nombres ni datos personales.
@@ -311,6 +299,19 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     const secciones = (await page.locator('main h1, main h2, main h3, main h4').allInnerTexts()).map((t) => t.trim()).filter(Boolean).slice(1);
     const texto = await textoConPestanas();
     const hay = (re) => (re.test(texto) ? 'aparece' : 'no aparece');
+    for (const pestana of ['General information', 'Family & billing', 'Medical & attendance']) {
+      await page.getByText(pestana, { exact: true }).first().click();
+      await expect(page.locator('main')).not.toContainText('Loading', { timeout: 60_000 }).catch(() => {});
+      const etiquetas = await page.locator('main').evaluate((el) => {
+        const out = new Set();
+        el.querySelectorAll('*').forEach((n) => {
+          const t = n.children.length === 0 ? n.textContent.trim() : '';
+          if (t && t.length <= 40 && !/[0-9@]/.test(t)) out.add(t);
+        });
+        return [...out];
+      });
+      console.log(`[CP-ONB-11] etiquetas en "${pestana}": ${JSON.stringify(etiquetas)}`);
+    }
     console.log(`[CP-ONB-11] secciones: ${JSON.stringify(secciones)}`);
     console.log(`[CP-ONB-11] forzamiento: ${hay(/forzamiento|enforc/i)} | método de pago: ${hay(/payment method|método de pago/i)} | recurrencia: ${hay(/recurring|recurrenc|autorizaci/i)}`);
   });
