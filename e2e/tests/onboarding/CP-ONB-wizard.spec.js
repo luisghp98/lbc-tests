@@ -71,10 +71,6 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     const leerMatriculas = async () => (await rest('enrollments', { headers, query: `child_id=eq.${id}&select=*` })).json || [];
     await expect.poll(async () => (await leerMatriculas()).length, { timeout: 60_000, message: 'el niño debe tener matrícula' }).toBeGreaterThan(0);
     const matriculas = { json: await leerMatriculas() };
-    const facturas = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=id,status,total_amount,recurring_payment_method_id` })).json || [];
-    await expect.poll(async () => (await facturas()).length, { timeout: 120_000, message: 'se crea la factura de onboarding' }).toBeGreaterThan(0);
-    expect(Number((await facturas())[0].total_amount), 'la factura tiene importe').toBeGreaterThan(0);
-
     // Punto 1: el niño queda asociado al tipo de enrolamiento elegido (Full Time).
     const tipo = (await rest('enrollment_types', { headers, query: `name=eq.${encodeURIComponent('Full Time')}&deleted_at=is.null&select=id` })).json[0];
     expect(matriculas.json[0].enrollment_type_id, 'la matrícula debe quedar con el tipo de enrolamiento elegido').toBe(tipo.id);
@@ -86,9 +82,6 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     console.log(`[CP-ONB-01] medicación en el detalle: ${detalle.slice(Math.max(0, i - 60), i + 220)}`);
     const filas = (await rest('medications', { headers, query: `child_id=eq.${id}&select=start_date,end_date` })).json || [];
     console.log(`[CP-ONB-01] filas en la tabla medications visibles para el rol: ${filas.length}`);
-
-    // Punto 5: sin autorización de débito recurrente, la factura queda sin método de pago asociado.
-    expect((await facturas())[0].recurring_payment_method_id, 'sin recurrencia, la factura no se asocia a un método de pago').toBeNull();
   });
 
   test('CP-ONB-02: aulas sin personal o con personal sin presencia quedan cerradas en el paso 4', async () => {
@@ -223,7 +216,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
     test.skip(!ultimoNinoId, 'Requiere el niño creado por CP-ONB-04');
     const secciones = await seccionesDelDetalle();
-    for (const s of ['Basic Information', 'Medical Information', 'Family Information', 'Enrollment Information', 'Billing Contact']) {
+    for (const s of ['Basic Information', 'Medical Information', 'Family Information', 'Enrollment Information']) {
       expect(secciones, `falta la sección ${s}`).toContain(s);
     }
   });
@@ -231,13 +224,12 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   test('CP-ONB-08: el informe sigue el orden y el contenido pedidos en el ticket', async () => {
     test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
     test.skip(!ultimoNinoId, 'Requiere el niño creado por CP-ONB-04');
-    test.fail(true, 'Hallazgo 9 nov: el detalle no sigue el orden del ticket (básica, médica, padre, enrolamiento, facturación) ni muestra forzamiento, método de pago ni autorización de recurrencia');
+    test.fail(true, 'Hallazgo 9 nov: el detalle no sigue el orden del ticket (básica, médica, padre, enrolamiento) ni muestra el forzamiento activo/inactivo');
     const secciones = await seccionesDelDetalle();
     const posiciones = ['Basic Information', 'Medical Information', 'Family Information', 'Enrollment Information'].map((t) => secciones.indexOf(t));
     expect(posiciones, 'orden de las secciones: básica, médica, padre, enrolamiento').toEqual([...posiciones].sort((a, b) => a - b));
     const texto = await page.locator('main').evaluate((el) => el.textContent);
     expect(texto, 'forzamiento activo/inactivo en el enrolamiento').toMatch(/forzamiento|enforce|enforcement/i);
-    expect(texto, 'método de pago y autorización de recurrencia en la facturación').toMatch(/recurring payment|autorizaci/i);
   });
 
   test('CP-ONB-09: el selector de fechas de medicación no admite fechas pasadas ni un fin anterior al inicio', async () => {
@@ -258,36 +250,5 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     await page.locator('button', { hasText: 'Select date' }).first().click();
     await expect(dia(enDias(2)), 'un fin anterior al inicio no se puede elegir').toBeDisabled();
     await expect(dia(enDias(3)), 'fin igual al inicio sí es válido').toBeEnabled();
-  });
-
-  // Punto 5 con un método sin datos sensibles: autorización de recurrencia activa con Cash.
-  test('CP-ONB-10: con la autorización de recurrencia activa, la factura queda asociada al método de pago', async () => {
-    test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
-    test.fail(true, 'Hallazgo 11 nov: con Cash y la autorización de recurrencia activa no se guarda ningún método de pago y la factura no se asocia (a confirmar con desarrollo si Cash debería permitir la casilla)');
-    const onb = new OnboardingPage(page);
-    const nino = qaChild();
-    await onb.goto();
-    await onb.datosNino({ ...nino, nacimiento: haceAnios(4) });
-    await onb.siguiente('Next: Family Member');
-    await onb.familiarNuevo(qaEmail());
-    await onb.metodoPago('Cash');
-    await page.getByText('Recurring Payment Authorization').first().click();
-    await onb.siguiente('Next: Medical Info');
-    await onb.siguiente('Next: Enrollment');
-    await onb.matricula({ aula: 'habilitada' });
-    await onb.completar();
-
-    const buscar = async () => (await rest('children', { headers, query: `last_name=eq.${nino.lastName}&select=id` })).json || [];
-    await expect.poll(async () => (await buscar()).length, { timeout: SLOW }).toBe(1);
-    const id = (await buscar())[0].id;
-    limpieza.trackChild(id);
-
-    const factura = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=id,recurring_payment_method_id,family_id` })).json || [];
-    await expect.poll(async () => (await factura()).length, { timeout: 120_000, message: 'se crea la factura de onboarding' }).toBeGreaterThan(0);
-    const f = (await factura())[0];
-    const metodos = (await rest('payment_methods', { headers, query: `family_id=eq.${f.family_id}&select=id,type,is_recurring_enabled,is_active` })).json || [];
-    console.log(`[CP-ONB-10] métodos de la familia: ${JSON.stringify(metodos)}; factura.recurring_payment_method_id: ${f.recurring_payment_method_id}`);
-    expect(metodos.some((x) => x.is_recurring_enabled), 'el método guardado debe quedar con la recurrencia habilitada').toBeTruthy();
-    expect(f.recurring_payment_method_id, 'la factura debe quedar asociada al método de pago').toBeTruthy();
   });
 });

@@ -95,3 +95,24 @@ Esto significa que para correr la suite contra otro colegio no hay que tocar nin
 ### Datos de prueba
 
 Los tests que necesitan una factura, un cargo o un pago para trabajar los crean por API antes de interactuar con la UI, y los eliminan por API al finalizar — no dependen de datos preexistentes en el ambiente ni los dejan como residuo.
+
+## Pruebas de onboarding (LBC-1702)
+
+Carpeta `e2e/tests/onboarding/`. No incluyen facturación ni pagos: eso pertenece al módulo de billing.
+
+| Archivo | Qué cubre |
+|---|---|
+| `CP-ONB-wizard.spec.js` | Registro completo por el wizard (foto, familiar nuevo, medicación, aula, matrícula), tipo de enrolamiento asociado, medicación guardada, selector de fechas, formatos y tope de la foto, ACH disponible en el paso 2, aulas cerradas sin personal y secciones del detalle del niño. |
+| `CP-ONB-api-seguridad.spec.js` | Llamadas directas a la API, sin formulario: sin sesión, token inválido, datos que el formulario valida, escuela ajena y permisos por rol. Etiqueta `@seguridad`. |
+
+**Ejecutar en local**
+
+```bash
+npx playwright test e2e/tests/onboarding                          # todo
+npx playwright test e2e/tests/onboarding --grep-invert @seguridad # sin las de seguridad
+```
+
+**Datos de prueba y limpieza.** Los niños llevan el apellido `QA-Lbc-…` y las aulas `QA-1702-…`. Cada prueba retira lo que crea (el niño, su matrícula en el aula y la asignación de personal) y al empezar hay un barrido de restos de corridas interrumpidas. Las matrículas activas ocupan cupo y activan el ratio, por eso siempre se retiran.
+
+**GitHub Actions.** El workflow `E2E onboarding (preprod)` es manual (*Run workflow*). Necesita tres secretos del repositorio (no variables): `LBC_USER`, `LBC_PASSWORD` y `LBC_API_KEY`. Tiene dos entradas opcionales: `grep` (filtra pruebas) y `grep_invert` (por defecto excluye `@seguridad`). Algunas pruebas solo se ejecutan en CI (`test.fixme(!process.env.CI)`) porque dependen de una conexión estable. El workflow no sube artefactos.
+
