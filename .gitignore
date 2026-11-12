@@ -13,3 +13,6 @@ node_modules/
 /LBC-1702_test_cases.md
 /evidence/exploration/
 /e2e/exploration/
+
+# Documentación con hallazgos internos: no publicar (repo público)
+/docs/LBC-1702/
