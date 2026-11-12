@@ -213,6 +213,17 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   });
 
   // El informe del punto 6 es el detalle del niño. Solo se ejecuta en CI: en local la sesión del navegador automatizado se cae.
+  // El detalle del niño tiene tres pestañas; el contenido de las no abiertas puede no estar en el DOM, así que se abren todas.
+  const textoConPestanas = async () => {
+    let todo = '';
+    for (const pestana of ['General information', 'Family & billing', 'Medical & attendance']) {
+      await page.getByText(pestana, { exact: true }).first().click();
+      await expect(page.locator('main')).not.toContainText('Loading', { timeout: 60_000 }).catch(() => {});
+      todo += ' ' + (await page.locator('main').evaluate((el) => el.textContent));
+    }
+    return todo.replace(/\s+/g, ' ');
+  };
+
   const seccionesDelDetalle = async () => {
     await page.goto(`/admin/children/${ultimoNinoId}`);
     await expect(page.locator('main'), 'el detalle del niño debe cargar').toContainText('QA-Lbc-', { timeout: SLOW });
@@ -235,9 +246,9 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     const secciones = await seccionesDelDetalle();
     const posiciones = ['Basic Information', 'Medical Information', 'Family Information', 'Enrollment Information'].map((t) => secciones.indexOf(t));
     expect(posiciones, 'orden de las secciones: básica, médica, padre, enrolamiento').toEqual([...posiciones].sort((a, b) => a - b));
-    const texto = await page.locator('main').evaluate((el) => el.textContent);
-    expect(texto, 'forzamiento activo/inactivo en el enrolamiento').toMatch(/forzamiento|enforce|enforcement/i);
-    expect(texto, 'método de pago y autorización de recurrencia en la facturación').toMatch(/recurring payment|autorizaci/i);
+    const texto = await textoConPestanas();
+    expect(texto, 'forzamiento activo/inactivo en el enrolamiento').toMatch(/forzamiento|enforc/i);
+    expect(texto, 'método de pago y autorización de recurrencia en la facturación').toMatch(/recurring|recurrenc|autorizaci/i);
   });
 
   test('CP-ONB-09: el selector de fechas de medicación no admite fechas pasadas ni un fin anterior al inicio', async () => {
@@ -289,5 +300,18 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     console.log(`[CP-ONB-10] métodos de la familia: ${JSON.stringify(metodos)}; factura.recurring_payment_method_id: ${f.recurring_payment_method_id}`);
     expect(metodos.some((x) => x.is_recurring_enabled), 'el método guardado debe quedar con la recurrencia habilitada').toBeTruthy();
     expect(f.recurring_payment_method_id, 'la factura debe quedar asociada al método de pago').toBeTruthy();
+  });
+
+  // Informativa: revisa un niño concreto (CHILD_ID) y dice qué aparece, sin imprimir nombres ni datos personales.
+  test('CP-ONB-11: qué información muestra el detalle de un niño concreto', async () => {
+    test.skip(!process.env.CHILD_ID, 'Defina CHILD_ID para revisar un niño concreto');
+    test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
+    await page.goto(`/admin/children/${process.env.CHILD_ID}`);
+    await expect(page.locator('main')).toContainText('Basic Information', { timeout: SLOW });
+    const secciones = (await page.locator('main h1, main h2, main h3, main h4').allInnerTexts()).map((t) => t.trim()).filter(Boolean).slice(1);
+    const texto = await textoConPestanas();
+    const hay = (re) => (re.test(texto) ? 'aparece' : 'no aparece');
+    console.log(`[CP-ONB-11] secciones: ${JSON.stringify(secciones)}`);
+    console.log(`[CP-ONB-11] forzamiento: ${hay(/forzamiento|enforc/i)} | método de pago: ${hay(/payment method|método de pago/i)} | recurrencia: ${hay(/recurring|recurrenc|autorizaci/i)}`);
   });
 });
