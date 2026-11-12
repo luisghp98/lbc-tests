@@ -98,7 +98,7 @@ Los tests que necesitan una factura, un cargo o un pago para trabajar los crean 
 
 ## Pruebas de onboarding (LBC-1702)
 
-Carpeta `e2e/tests/onboarding/`. No incluyen facturación ni pagos: eso pertenece al módulo de billing.
+Carpeta `e2e/tests/onboarding/`. Comprueban que se genera la factura de onboarding, pero no su pago: los pagos pertenecen al módulo de billing.
 
 | Archivo | Qué cubre |
 |---|---|
