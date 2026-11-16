@@ -296,22 +296,11 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
     await page.goto(`/admin/children/${process.env.CHILD_ID}`);
     await expect(page.locator('main')).toContainText('Basic Information', { timeout: SLOW });
-    const secciones = (await page.locator('main h1, main h2, main h3, main h4').allInnerTexts()).map((t) => t.trim()).filter(Boolean).slice(1);
+    // Solo se listan títulos de sección conocidos: el log es público y los títulos del detalle pueden llevar el nombre del niño o la familia.
+    const CONOCIDAS = ['Basic Information', 'Enrollment Information', 'Enrollment History', 'Current Classroom', 'Family Information', 'Billing Contact', 'Financial History', 'Medical Information', 'Medication History', 'Attendance History', 'Quick Stats', 'System Information', 'Quick Actions'];
+    const secciones = (await page.locator('main h1, main h2, main h3, main h4').allInnerTexts()).map((t) => t.trim()).filter((t) => CONOCIDAS.includes(t));
     const texto = await textoConPestanas();
     const hay = (re) => (re.test(texto) ? 'aparece' : 'no aparece');
-    for (const pestana of ['General information', 'Family & billing', 'Medical & attendance']) {
-      await page.getByText(pestana, { exact: true }).first().click();
-      await expect(page.locator('main')).not.toContainText('Loading', { timeout: 60_000 }).catch(() => {});
-      const etiquetas = await page.locator('main').evaluate((el) => {
-        const out = new Set();
-        el.querySelectorAll('*').forEach((n) => {
-          const t = n.children.length === 0 ? n.textContent.trim() : '';
-          if (t && t.length <= 40 && !/[0-9@]/.test(t)) out.add(t);
-        });
-        return [...out];
-      });
-      console.log(`[CP-ONB-11] etiquetas en "${pestana}": ${JSON.stringify(etiquetas)}`);
-    }
     console.log(`[CP-ONB-11] secciones: ${JSON.stringify(secciones)}`);
     console.log(`[CP-ONB-11] forzamiento: ${hay(/forzamiento|enforc/i)} | método de pago: ${hay(/payment method|método de pago/i)} | recurrencia: ${hay(/recurring|recurrenc|autorizaci/i)}`);
   });
