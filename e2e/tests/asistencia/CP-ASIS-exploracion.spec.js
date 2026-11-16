@@ -163,3 +163,55 @@ test.describe('ASIS-EXP-03: cambio de aula', { tag: '@asistencia' }, () => {
     console.log(`[ASIS] check-out tras el cambio: HTTP ${sal.status} ${sal.error || ''} -> ${JSON.stringify(await a.asistencia())}`);
   });
 });
+
+// Exploración del forzamiento: schools.settings.enforce_child_ratio y qué validan el check-in y el día contratado.
+test.describe('ASIS-EXP-04: forzamiento y validación de check-in', { tag: '@asistencia' }, () => {
+  test.setTimeout(600_000);
+  const limpieza = new QaCleanup();
+  let page; let headers; let a; let original;
+
+  test.beforeAll(async ({ browser }) => {
+    page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+    await loginViaUI(page);
+    headers = await asUser();
+    await limpieza.sweep(headers);
+    a = new AsistenciaQA(headers);
+    await a.iniciar();
+  });
+
+  test.afterAll(async () => {
+    headers = await asUser();
+    if (original) {
+      const r = await rest('schools', { method: 'PATCH', headers, query: `id=eq.${a.schoolId}`, body: { settings: original } });
+      console.log(`[ASIS] settings de la escuela restaurados: HTTP ${r.status} ${JSON.stringify(((await rest('schools', { headers, query: `id=eq.${a.schoolId}&select=settings` })).json[0] || {}).settings) === JSON.stringify(original) ? '(idénticos)' : '(DIFERENTES)'}`);
+    }
+    await limpieza.run(headers);
+    await page.context().close();
+  });
+
+  test('ASIS-EXP-04: forzamiento y validación', async () => {
+    test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
+    const { id } = await registrarNino(page, limpieza);
+    await a.usarNino(id);
+    const llamar = (fn, body) => rest(`rpc/${fn}`, { method: 'POST', headers, body });
+    const resumen = (r) => `HTTP ${r.status} ${String(r.text).slice(0, 260)}`;
+
+    const domingo = new Date(`${a.hoy}T12:00:00Z`); domingo.setUTCDate(domingo.getUTCDate() + ((7 - domingo.getUTCDay()) % 7 || 7));
+    for (const [nombre, fecha] of [['hoy', a.hoy], ['próximo domingo', domingo.toISOString().slice(0, 10)]]) {
+      console.log(`[ASIS] fn_is_child_allowed_in_classroom ${nombre} (${fecha}): ${resumen(await llamar('fn_is_child_allowed_in_classroom', { p_child_id: id, p_date: fecha, p_school_id: a.schoolId }))}`);
+    }
+
+    const aulas = (await rest('classrooms', { headers, query: 'deleted_at=is.null&is_active=eq.true&select=id,classroom_name,assigned_ratio_id' })).json || [];
+    const validar = async (titulo) => {
+      for (const c of aulas) console.log(`[ASIS] validar check-in (${titulo}) en ${c.classroom_name} [${c.assigned_ratio_id ? 'con ratio' : 'sin ratio'}]: ${resumen(await llamar('fn_validate_child_checkin', { p_child_id: id, p_classroom_id: c.id, p_school_id: a.schoolId }))}`);
+    };
+    const esc = (await rest('schools', { headers, query: `id=eq.${a.schoolId}&select=settings` })).json[0];
+    original = esc.settings;
+    console.log(`[ASIS] forzamiento actual: ${JSON.stringify({ nino: original.enforce_child_ratio, staff: original.enforce_staff_ratio })}`);
+    await validar('forzamiento activo');
+
+    const apagado = await rest('schools', { method: 'PATCH', headers, query: `id=eq.${a.schoolId}`, body: { settings: { ...original, enforce_child_ratio: false } } });
+    console.log(`[ASIS] apagar enforce_child_ratio: HTTP ${apagado.status} ${apagado.status >= 300 ? String(apagado.text).slice(0, 200) : ''}`);
+    if (apagado.status < 300) await validar('forzamiento inactivo');
+  });
+});
