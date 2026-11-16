@@ -41,6 +41,9 @@ test.describe('ASIS: exploración de check-in tardío', { tag: '@asistencia' }, 
     // El RPC solo acepta la fecha local de hoy (zona del colegio): el horario que cuenta es el de hoy.
     const ymd = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const dow = new Date(`${ymd}T12:00:00Z`).getUTCDay();
+    // Desfase de Nueva York ese día (cambia con el horario de verano)
+    const gmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' }).formatToParts(new Date(`${ymd}T12:00:00Z`)).find((x) => x.type === 'timeZoneName').value.match(/GMT([+-])(\d+)/);
+    const desfase = `${gmt[1]}${gmt[2].padStart(2, '0')}:00`;
     const hoy = horarios.find((h) => h.day_of_week === dow);
     console.log(`[ASIS] hoy (NY) ${ymd}, día ${dow}, horario de hoy: ${JSON.stringify(hoy || 'sin horario')}`);
     const dia = hoy || horarios[0];
@@ -58,7 +61,7 @@ test.describe('ASIS: exploración de check-in tardío', { tag: '@asistencia' }, 
     const perfil = (await rest('profiles', { headers, query: `user_id=eq.${yo.id}&select=id` })).json[0].id;
     const entrada = await rest('rpc/fn_manual_check_in_child', { method: 'POST', headers, body: {
       p_child_id: id, p_classroom_id: aula, p_school_id: schoolId, p_authorized_by: perfil, p_entry_method: 'manual_admin',
-      p_exception_reason: 'QA automatizado', p_tutor_doc_verified: true, p_local_date: ymd, p_local_time: hora(6),
+      p_exception_reason: 'QA automatizado', p_tutor_doc_verified: true, p_entry_time: `${ymd}T${hora(6)}${desfase}`, p_local_date: ymd, p_local_time: hora(6),
     } });
     console.log(`[ASIS] check-in ${ymd} ${hora(6)} (inicio ${dia.start_time}): HTTP ${entrada.status} ${String(entrada.text).slice(0, 400)}`);
     const asistencia = (await rest('attendance', { headers, query: `child_id=eq.${id}&select=id,attendance_date,entry_time,exit_time,status,minutes_late,is_late,entry_method` })).json;
@@ -69,7 +72,7 @@ test.describe('ASIS: exploración de check-in tardío', { tag: '@asistencia' }, 
       const tarde = `${String(h2).padStart(2, '0')}:${String(m2 + 15).padStart(2, '0')}:00`;
       const salida = await rest('rpc/fn_manual_check_out_child', { method: 'POST', headers, body: {
         p_attendance_id: asistencia[0].id, p_authorized_by: perfil, p_exit_method: 'manual_admin', p_exception_reason: 'QA automatizado',
-        p_tutor_doc_verified: true, p_local_time: tarde,
+        p_tutor_doc_verified: true, p_exit_time: `${ymd}T${tarde}${desfase}`, p_local_time: tarde,
       } });
       console.log(`[ASIS] check-out ${tarde} (fin ${dia.end_time}): HTTP ${salida.status} ${String(salida.text).slice(0, 400)}`);
       const tras = (await rest('attendance', { headers, query: `child_id=eq.${id}&select=exit_time,minutes_late_checkout,is_late_checkout` })).json;
