@@ -40,6 +40,7 @@ class QaCleanup {
       await rest('invoice_items', { method: 'DELETE', headers, query: `invoice_id=eq.${inv.id}` });
       await rest('invoices', { method: 'DELETE', headers, query: `id=eq.${inv.id}` });
     }
+    await rest('child_classroom_transitions', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
     await rest('charges', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
     await rest('attendance', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
     await rest('child_financial_responsibles', { method: 'DELETE', headers, query: `child_id=eq.${id}` });

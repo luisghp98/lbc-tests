@@ -3,6 +3,7 @@ const { loginViaUI } = require('../../utils/auth');
 const { asUser, rest, request } = require('../../utils/rest');
 const { QaCleanup } = require('../../utils/qa');
 const { registrarNino } = require('../../utils/wizard');
+const { AsistenciaQA } = require('../../utils/asistencia');
 
 // Exploración de LBC-825: cómo calcula el sistema el retraso y los cargos. Solo en CI (red estable). Restaura la configuración al terminar.
 test.describe('ASIS: exploración de check-in tardío', { tag: '@asistencia' }, () => {
@@ -112,4 +113,53 @@ test('ASIS-EXP-02: esquema de enforzamiento y cambio de aula', { tag: '@asistenc
   }
   for (const t of ['child_classroom_transitions', 'classroom_schedules', 'ratio_event_attempt_logs']) console.log(`[ASIS] ${t}: ${Object.keys((defs[t] || {}).properties || {}).join(', ')}`);
   console.log(`[ASIS] classrooms.operating_hours: ${JSON.stringify((await rest('classrooms', { headers, query: 'select=name,operating_hours,ratio_compliance_status&limit=3' })).json)}`);
+});
+
+// Exploración del cambio de aula (bloque F): opciones, cambio y qué queda en la asistencia y en la asignación.
+test.describe('ASIS-EXP-03: cambio de aula', { tag: '@asistencia' }, () => {
+  test.setTimeout(600_000);
+  const limpieza = new QaCleanup();
+  let page; let headers; let a;
+
+  test.beforeAll(async ({ browser }) => {
+    page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+    await loginViaUI(page);
+    headers = await asUser();
+    await limpieza.sweep(headers);
+    a = new AsistenciaQA(headers);
+    await a.iniciar();
+  });
+
+  test.afterAll(async () => {
+    headers = await asUser();
+    await limpieza.run(headers);
+    await page.context().close();
+  });
+
+  test('ASIS-EXP-03: cambio de aula tras el check-in', async () => {
+    test.fixme(!process.env.CI, 'Solo se ejecuta en CI');
+    const { id } = await registrarNino(page, limpieza);
+    await a.usarNino(id);
+    const ent = await a.entrar(8 * 60 + 6);
+    console.log(`[ASIS] check-in: HTTP ${ent.status} ${ent.error || ''}`);
+    const attId = ent.asistencia.id;
+    const opciones = await rest('rpc/fn_get_child_classroom_change_options', { method: 'POST', headers, body: { p_attendance_id: attId, p_local_time: '09:00:00', p_school_id: a.schoolId } });
+    console.log(`[ASIS] opciones de aula: HTTP ${opciones.status} ${JSON.stringify(opciones.json).slice(0, 1800)}`);
+    const lista = (opciones.json && (opciones.json.data || opciones.json.options || opciones.json)) || [];
+    const destino = (Array.isArray(lista) ? lista : (lista.classrooms || lista.options || [])).find((o) => (o.classroom_id || o.id) && (o.classroom_id || o.id) !== a.aulaId);
+    console.log(`[ASIS] destino elegido: ${JSON.stringify(destino)}`);
+    if (!destino) return;
+    const antes = (await rest('classroom_enrollments', { headers, query: `child_id=eq.${id}&select=classroom_id,status` })).json;
+    const cambio = await rest('rpc/fn_change_child_classroom', { method: 'POST', headers, body: {
+      p_attendance_id: attId, p_school_id: a.schoolId, p_to_classroom_id: destino.classroom_id || destino.id, p_reason: 'QA automatizado',
+      p_local_date: a.hoy, p_local_time: '09:00:00', p_proceed_with_ratio_warning: false,
+    } });
+    console.log(`[ASIS] cambio de aula: HTTP ${cambio.status} ${String(cambio.text).slice(0, 900)}`);
+    console.log(`[ASIS] asistencia tras el cambio: ${JSON.stringify(await a.asistencia())}`);
+    console.log(`[ASIS] asignación estructural: antes ${JSON.stringify(antes)} / después ${JSON.stringify((await rest('classroom_enrollments', { headers, query: `child_id=eq.${id}&select=classroom_id,status` })).json)}`);
+    const tr = (await rest('child_classroom_transitions', { headers, query: `child_id=eq.${id}&select=transition_type,reason,ratio_enforced,ratio_warning,from_classroom_id,to_classroom_id,validation_payload` })).json;
+    console.log(`[ASIS] transiciones: ${JSON.stringify(tr).slice(0, 1200)}`);
+    const sal = await a.salir(attId, 17 * 60);
+    console.log(`[ASIS] check-out tras el cambio: HTTP ${sal.status} ${sal.error || ''} -> ${JSON.stringify(await a.asistencia())}`);
+  });
 });
