@@ -54,10 +54,14 @@ class AsistenciaQA {
 
   get hayHorario() { return this.inicio !== null; }
 
-  /** Aplica una política: todo apagado salvo lo que se indique. */
+  /** Intenta aplicar una política (todo apagado salvo lo indicado) y devuelve la respuesta sin lanzar. */
+  intentarPolitica(cambios = {}) {
+    return rest('school_settings', { method: 'PATCH', headers: this.headers, query: `school_id=eq.${this.schoolId}&deleted_at=is.null`, body: { ...APAGADAS, ...cambios } });
+  }
+
   async politica(cambios = {}) {
-    const r = await rest('school_settings', { method: 'PATCH', headers: this.headers, query: `school_id=eq.${this.schoolId}&deleted_at=is.null`, body: { ...APAGADAS, ...cambios } });
-    if (r.status >= 300) throw new Error(`No se pudo aplicar la política: HTTP ${r.status}`);
+    const r = await this.intentarPolitica(cambios);
+    if (r.status >= 300) throw new Error(`No se pudo aplicar la política: HTTP ${r.status} ${String(r.text).slice(0, 250)}`);
   }
 
   async restaurar() {

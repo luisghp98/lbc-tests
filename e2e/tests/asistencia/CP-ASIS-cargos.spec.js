@@ -11,6 +11,7 @@ const { AsistenciaQA } = require('../../utils/asistencia');
 // Las horas se simulan con p_entry_time / p_exit_time, relativas al horario contratado de hoy.
 test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)', { tag: '@asistencia' }, () => {
   test.setTimeout(600_000);
+  test.describe.configure({ retries: 0 }); // cada reintento volvería a registrar al niño
   test.skip(!process.env.CI, 'Solo se ejecuta en CI');
 
   const limpieza = new QaCleanup();
@@ -55,6 +56,7 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
 
   // ---------- A. Late check-in ----------
   const FIJA = { attendance_late_check_in_flat_fee_enabled: true, attendance_late_check_in_fee_amount: 10 };
+  const SIN_GRACIA = { attendance_grace_period_minutes: 0 };
   const MIN2 = { attendance_late_check_in_per_minute_enabled: true, attendance_late_check_in_per_minute_rate: 2 };
 
   test('A-01: a la hora exacta no hay cargo ni retraso', async () => {
@@ -81,18 +83,18 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     expect(c[0].fee_breakdown).toMatchObject({ total: 10, flat_fee: 10, flat_fee_enabled: true, grace_minutes: 5, minutes_late: 6, exceeded_minutes: 1 });
   });
 
-  test('A-04: por minuto ($2) a los 10 min de retraso', async () => {
+  test('A-04: por minuto ($2) a los 10 min de retraso, sin gracia (ejemplo de LBC-1310)', async () => {
     conHorario();
-    const r = await correr({ politica: MIN2, entrada: a.inicio + 10 });
+    const r = await correr({ politica: { ...MIN2, ...SIN_GRACIA }, entrada: a.inicio + 10 });
     const c = deTipo(r.cargos, 'late_check_in');
     console.log(`[A-04] cargo: ${JSON.stringify(c)}`);
     expect(c).toHaveLength(1);
     expect(Number(c[0].amount), 'LBC-1310: 10 min x $2').toBe(20);
   });
 
-  test('A-05: tarifa fija + por minuto a los 10 min de retraso', async () => {
+  test('A-05: tarifa fija + por minuto a los 10 min de retraso, sin gracia (ejemplo de LBC-1310)', async () => {
     conHorario();
-    const r = await correr({ politica: { ...FIJA, ...MIN2 }, entrada: a.inicio + 10 });
+    const r = await correr({ politica: { ...FIJA, ...MIN2, ...SIN_GRACIA }, entrada: a.inicio + 10 });
     const c = deTipo(r.cargos, 'late_check_in');
     console.log(`[A-05] cargo: ${JSON.stringify(c)}`);
     expect(c).toHaveLength(1);
@@ -106,10 +108,20 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     expect(r.cargos).toEqual([]);
   });
 
-  test('A-07: tarifa fija en $0 no genera cargo', async () => {
-    conHorario();
-    const r = await correr({ politica: { attendance_late_check_in_flat_fee_enabled: true, attendance_late_check_in_fee_amount: 0 }, entrada: a.inicio + 30 });
-    expect(r.cargos).toEqual([]);
+  test('A-07: una penalización de $0 no genera cargo (si el sistema deja configurarla)', async () => {
+    const intentos = [
+      ['tarifa fija $0', { attendance_late_check_in_flat_fee_enabled: true, attendance_late_check_in_fee_amount: 0 }],
+      ['por minuto $0', { attendance_late_check_in_per_minute_enabled: true, attendance_late_check_in_per_minute_rate: 0 }],
+    ];
+    for (const [nombre, cfg] of intentos) {
+      await a.limpiarDia();
+      const conf = await a.intentarPolitica(cfg);
+      if (conf.status >= 300) { console.log(`[A-07] ${nombre}: el sistema rechaza esa configuración (HTTP ${conf.status} ${String(conf.text).slice(0, 200)})`); continue; }
+      const ent = await a.entrar(a.inicio + 30);
+      expect(ent.status, ent.error).toBeLessThan(300);
+      expect(await a.cargos(), `${nombre}: no debe haber cargo`).toEqual([]);
+      console.log(`[A-07] ${nombre}: configuración aceptada y sin cargo`);
+    }
   });
 
   test('A-08: el cargo detalla su cálculo (fee_breakdown)', async () => {
@@ -141,9 +153,9 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     expect(Number(c[0].amount)).toBe(5);
   });
 
-  test('B-03: antes de la gracia por minuto ($1) a los 10 min de anticipación', async () => {
+  test('B-03: por minuto ($1) a los 10 min de anticipación, sin gracia', async () => {
     conHorario();
-    const r = await correr({ politica: EARLY_MIN, entrada: a.inicio - 10 });
+    const r = await correr({ politica: { ...EARLY_MIN, early_check_in_grace_period_minutes: 0 }, entrada: a.inicio - 10 });
     const c = tempranos(r.cargos);
     console.log(`[B-03] cargo: ${JSON.stringify(c)}`);
     expect(c).toHaveLength(1);
@@ -176,18 +188,18 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     expect(c[0].fee_breakdown).toMatchObject({ minutes_late: 15, grace_minutes: 5, exceeded_minutes: 10 });
   });
 
-  test('C-03: salida 15 min tarde por minuto ($2)', async () => {
+  test('C-03: salida 15 min tarde por minuto ($2), sin gracia', async () => {
     conHorario();
-    const r = await correr({ politica: OUT_MIN, entrada: a.inicio, salida: a.fin + 15 });
+    const r = await correr({ politica: { ...OUT_MIN, ...SIN_GRACIA }, entrada: a.inicio, salida: a.fin + 15 });
     const c = deTipo(r.cargos, 'late_check_out');
     console.log(`[C-03] cargo: ${JSON.stringify(c)}`);
     expect(c).toHaveLength(1);
     expect(Number(c[0].amount), '15 min x $2').toBe(30);
   });
 
-  test('C-04: salida 15 min tarde con tarifa fija + por minuto', async () => {
+  test('C-04: salida 15 min tarde con tarifa fija + por minuto, sin gracia', async () => {
     conHorario();
-    const r = await correr({ politica: { ...OUT_FIJA, ...OUT_MIN }, entrada: a.inicio, salida: a.fin + 15 });
+    const r = await correr({ politica: { ...OUT_FIJA, ...OUT_MIN, ...SIN_GRACIA }, entrada: a.inicio, salida: a.fin + 15 });
     const c = deTipo(r.cargos, 'late_check_out');
     console.log(`[C-04] cargo: ${JSON.stringify(c)}`);
     expect(c).toHaveLength(1);
@@ -199,6 +211,20 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     const r = await correr({ politica: { ...OUT_FIJA, ...OUT_MIN }, entrada: a.inicio, salida: a.fin - 5 });
     expect(r.asistencia.is_late_checkout).toBe(false);
     expect(deTipo(r.cargos, 'late_check_out')).toEqual([]);
+  });
+
+  // ---------- G. Gracia y tarifa por minuto ----------
+  test('G-01: con gracia 5, la tarifa por minuto se cuenta desde que termina la gracia (duda para el PO)', async () => {
+    test.info().annotations.push({ type: 'duda', description: 'LBC-1310 no aclara si los "minutos de retraso" de la tarifa por minuto incluyen la gracia. El sistema cobra solo los minutos que la exceden.' });
+    const r = await correr({ politica: { ...MIN2, ...OUT_MIN }, entrada: a.inicio + 10, salida: a.fin + 15 });
+    for (const [evento, tarde] of [['late_check_in', 10], ['late_check_out', 15]]) {
+      const c = deTipo(r.cargos, evento);
+      expect(c, evento).toHaveLength(1);
+      const d = c[0].fee_breakdown;
+      console.log(`[G-01] ${evento}: ${tarde} min tarde, gracia ${d.grace_minutes}, excedido ${d.exceeded_minutes}, monto ${c[0].amount}`);
+      expect(d.exceeded_minutes, `${evento}: minutos excedidos = retraso - gracia`).toBe(tarde - d.grace_minutes);
+      expect(Number(c[0].amount), `${evento}: monto = minutos excedidos x tarifa`).toBe(d.exceeded_minutes * 2);
+    }
   });
 
   // ---------- D-01. Día sin horario contratado (solo corre cuando hoy el niño no tiene horario, p. ej. domingo) ----------
