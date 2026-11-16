@@ -83,3 +83,25 @@ test.describe('ASIS: exploración de check-in tardío', { tag: '@asistencia' }, 
     console.log(`[ASIS] cargos: ${JSON.stringify(cargos)}`);
   });
 });
+
+// Lee el esquema de la API: dónde vive el enforzamiento y qué parámetros tienen las funciones de cambio de aula.
+test('ASIS-EXP-02: esquema de enforzamiento y cambio de aula', { tag: '@asistencia' }, async () => {
+  const headers = await asUser();
+  const spec = (await request('/rest/v1/', { headers })).json || {};
+  const defs = spec.definitions || {};
+  const cols = [];
+  for (const [t, d] of Object.entries(defs)) for (const k of Object.keys(d.properties || {})) if (/enforc|strict|block|compliance/i.test(k)) cols.push(`${t}.${k}`);
+  console.log(`[ASIS] columnas con enforce/strict/block/compliance: ${cols.join(', ')}`);
+  for (const n of ['fn_change_child_classroom', 'fn_get_child_classroom_change_options', 'fn_get_child_classroom_transitions', 'fn_validate_child_checkin', 'fn_is_child_allowed_in_classroom', 'fn_log_ratio_event_attempt']) {
+    const post = ((spec.paths || {})[`/rpc/${n}`] || {}).post || {};
+    let props = [];
+    for (const x of post.parameters || []) {
+      const sc = x.schema || {};
+      const d = sc.$ref ? defs[sc.$ref.split('/').pop()] : sc;
+      props = Object.keys((d && d.properties) || {});
+    }
+    console.log(`[ASIS] ${n}(${props.join(', ')})`);
+  }
+  for (const t of ['child_classroom_transitions', 'classroom_schedules', 'ratio_event_attempt_logs']) console.log(`[ASIS] ${t}: ${Object.keys((defs[t] || {}).properties || {}).join(', ')}`);
+  console.log(`[ASIS] classrooms.operating_hours: ${JSON.stringify((await rest('classrooms', { headers, query: 'select=name,operating_hours,ratio_compliance_status&limit=3' })).json)}`);
+});
