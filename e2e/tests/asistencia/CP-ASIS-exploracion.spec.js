@@ -98,9 +98,17 @@ test('ASIS-EXP-02: esquema de enforzamiento y cambio de aula', { tag: '@asistenc
     for (const x of post.parameters || []) {
       const sc = x.schema || {};
       const d = sc.$ref ? defs[sc.$ref.split('/').pop()] : sc;
-      props = Object.keys((d && d.properties) || {});
+      const k = Object.keys((d && d.properties) || {});
+      if (k.length) props = k;
     }
     console.log(`[ASIS] ${n}(${props.join(', ')})`);
+  }
+  const ratio = [];
+  for (const [t, d] of Object.entries(defs)) if (!/log|audit|attempt|transition|event/i.test(t)) for (const k of Object.keys(d.properties || {})) if (/ratio/i.test(k)) ratio.push(`${t}.${k}`);
+  console.log(`[ASIS] columnas de ratio (sin logs): ${ratio.join(', ')}`);
+  for (const t of ['attendance_attempt_logs', 'ratio_event_attempt_logs', 'child_classroom_transitions']) {
+    const f = await rest(t, { headers, query: 'order=created_at.desc&limit=4' });
+    for (const r of f.json || []) console.log(`[ASIS] ${t}: ${JSON.stringify({ enforce_active: r.enforce_active, ratio_enforced: r.ratio_enforced, ratio_warning: r.ratio_warning, event_type: r.event_type, transition_type: r.transition_type, outcome: r.outcome, reason: r.reason, payload: Object.keys(r.validation_payload || {}) })}`);
   }
   for (const t of ['child_classroom_transitions', 'classroom_schedules', 'ratio_event_attempt_logs']) console.log(`[ASIS] ${t}: ${Object.keys((defs[t] || {}).properties || {}).join(', ')}`);
   console.log(`[ASIS] classrooms.operating_hours: ${JSON.stringify((await rest('classrooms', { headers, query: 'select=name,operating_hours,ratio_compliance_status&limit=3' })).json)}`);
