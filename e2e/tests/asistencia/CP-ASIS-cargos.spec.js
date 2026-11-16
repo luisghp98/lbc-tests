@@ -3,7 +3,7 @@ const { loginViaUI } = require('../../utils/auth');
 const { asUser } = require('../../utils/rest');
 const { QaCleanup } = require('../../utils/qa');
 const { registrarNino } = require('../../utils/wizard');
-const { AsistenciaQA } = require('../../utils/asistencia');
+const { AsistenciaQA, TIPO_QA } = require('../../utils/asistencia');
 
 // LBC-825, bloques A (late check-in), B (early check-in), C (late check-out) y D-01 (día sin horario).
 // Un solo niño QA: antes de cada caso se borra su asistencia del día y se aplica la política del caso.
@@ -23,8 +23,11 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     await limpieza.sweep(headers);
     a = new AsistenciaQA(headers);
     await a.iniciar();
-    const { id } = await registrarNino(page, limpieza);
+    await a.quitarTipos();
+    await a.crearTipo();
+    const { id } = await registrarNino(page, limpieza, { tipo: new RegExp(TIPO_QA) });
     await a.usarNino(id);
+    expect(a.hayHorario, 'el tipo QA tiene horario todos los días').toBe(true);
     console.log(`[ASIS] hoy ${a.hoy} (día ${a.diaSemana}), horario de hoy: ${a.hayHorario ? `${a.inicio}-${a.fin} min` : 'sin horario'}`);
   });
 
@@ -33,12 +36,11 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     a.headers = headers;
     await a.restaurar();
     await limpieza.run(headers);
+    await a.quitarTipos();
     await page.context().close();
   });
 
   test.beforeEach(async () => { await a.limpiarDia(); });
-
-  const conHorario = () => test.skip(!a.hayHorario, 'Hoy el niño no tiene horario contratado (se prueba de lunes a sábado)');
 
   /** Check-in y, si se pide, check-out; devuelve asistencia y cargos. */
   async function correr({ politica, entrada, salida }) {
@@ -58,21 +60,18 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   const MIN2 = { attendance_late_check_in_per_minute_enabled: true, attendance_late_check_in_per_minute_rate: 2 };
 
   test('A-01: a la hora exacta no hay cargo ni retraso', async () => {
-    conHorario();
     const r = await correr({ politica: FIJA, entrada: a.inicio });
     expect(r.asistencia.is_late).toBe(false);
     expect(r.cargos).toEqual([]);
   });
 
   test('A-02: justo en el límite de la gracia (5 min) no hay cargo', async () => {
-    conHorario();
     const r = await correr({ politica: FIJA, entrada: a.inicio + 5 });
     console.log(`[A-02] asistencia: ${JSON.stringify(r.asistencia)} cargos: ${r.cargos.length}`);
     expect(deTipo(r.cargos, 'late_check_in')).toEqual([]);
   });
 
   test('A-03: pasada la gracia con tarifa fija se cobra $10 con su desglose', async () => {
-    conHorario();
     const r = await correr({ politica: FIJA, entrada: a.inicio + 6 });
     expect(r.asistencia.is_late).toBe(true);
     const c = deTipo(r.cargos, 'late_check_in');
@@ -82,7 +81,6 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   test('A-04: por minuto ($2) a los 10 min de retraso', async () => {
-    conHorario();
     const r = await correr({ politica: MIN2, entrada: a.inicio + 10 });
     const c = deTipo(r.cargos, 'late_check_in');
     console.log(`[A-04] cargo: ${JSON.stringify(c)}`);
@@ -91,7 +89,6 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   test('A-05: tarifa fija + por minuto a los 10 min de retraso', async () => {
-    conHorario();
     const r = await correr({ politica: { ...FIJA, ...MIN2 }, entrada: a.inicio + 10 });
     const c = deTipo(r.cargos, 'late_check_in');
     console.log(`[A-05] cargo: ${JSON.stringify(c)}`);
@@ -100,20 +97,17 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   test('A-06: con la política desactivada no hay cargo aunque llegue tarde', async () => {
-    conHorario();
     const r = await correr({ politica: {}, entrada: a.inicio + 30 });
     expect(r.asistencia.is_late).toBe(true);
     expect(r.cargos).toEqual([]);
   });
 
   test('A-07: tarifa fija en $0 no genera cargo', async () => {
-    conHorario();
     const r = await correr({ politica: { attendance_late_check_in_flat_fee_enabled: true, attendance_late_check_in_fee_amount: 0 }, entrada: a.inicio + 30 });
     expect(r.cargos).toEqual([]);
   });
 
   test('A-08: el cargo detalla su cálculo (fee_breakdown)', async () => {
-    conHorario();
     const r = await correr({ politica: { ...FIJA, ...MIN2 }, entrada: a.inicio + 10 });
     const c = deTipo(r.cargos, 'late_check_in')[0];
     expect(c, 'debe existir el cargo').toBeTruthy();
@@ -127,13 +121,11 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   const tempranos = (cargos) => cargos.filter((c) => !['late_check_in', 'late_check_out'].includes(c.source_event));
 
   test('B-01: dentro de la gracia de early (5 min) no hay cargo', async () => {
-    conHorario();
     const r = await correr({ politica: EARLY_FIJA, entrada: a.inicio - 2 });
     expect(tempranos(r.cargos)).toEqual([]);
   });
 
   test('B-02: antes de la gracia con tarifa fija se cobra $5', async () => {
-    conHorario();
     const r = await correr({ politica: EARLY_FIJA, entrada: a.inicio - 10 });
     const c = tempranos(r.cargos);
     console.log(`[B-02] cargo: ${JSON.stringify(c)}`);
@@ -142,7 +134,6 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   test('B-03: antes de la gracia por minuto ($1) a los 10 min de anticipación', async () => {
-    conHorario();
     const r = await correr({ politica: EARLY_MIN, entrada: a.inicio - 10 });
     const c = tempranos(r.cargos);
     console.log(`[B-03] cargo: ${JSON.stringify(c)}`);
@@ -151,7 +142,6 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   test('B-04: con la política desactivada no hay cargo aunque llegue temprano', async () => {
-    conHorario();
     const r = await correr({ politica: {}, entrada: a.inicio - 30 });
     expect(tempranos(r.cargos)).toEqual([]);
   });
@@ -161,13 +151,11 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   const OUT_MIN = { attendance_late_check_out_per_minute_enabled: true, attendance_late_check_out_per_minute_rate: 2 };
 
   test('C-01: salida dentro de la gracia (3 min) no genera cargo', async () => {
-    conHorario();
     const r = await correr({ politica: OUT_FIJA, entrada: a.inicio, salida: a.fin + 3 });
     expect(deTipo(r.cargos, 'late_check_out')).toEqual([]);
   });
 
   test('C-02: salida 15 min tarde con tarifa fija se cobra $10', async () => {
-    conHorario();
     const r = await correr({ politica: OUT_FIJA, entrada: a.inicio, salida: a.fin + 15 });
     expect(r.asistencia.is_late_checkout).toBe(true);
     const c = deTipo(r.cargos, 'late_check_out');
@@ -177,7 +165,6 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   test('C-03: salida 15 min tarde por minuto ($2)', async () => {
-    conHorario();
     const r = await correr({ politica: OUT_MIN, entrada: a.inicio, salida: a.fin + 15 });
     const c = deTipo(r.cargos, 'late_check_out');
     console.log(`[C-03] cargo: ${JSON.stringify(c)}`);
@@ -186,7 +173,6 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   test('C-04: salida 15 min tarde con tarifa fija + por minuto', async () => {
-    conHorario();
     const r = await correr({ politica: { ...OUT_FIJA, ...OUT_MIN }, entrada: a.inicio, salida: a.fin + 15 });
     const c = deTipo(r.cargos, 'late_check_out');
     console.log(`[C-04] cargo: ${JSON.stringify(c)}`);
@@ -195,18 +181,21 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   test('C-05: salida antes de la hora fin no genera cargo', async () => {
-    conHorario();
     const r = await correr({ politica: { ...OUT_FIJA, ...OUT_MIN }, entrada: a.inicio, salida: a.fin - 5 });
     expect(r.asistencia.is_late_checkout).toBe(false);
     expect(deTipo(r.cargos, 'late_check_out')).toEqual([]);
   });
 
-  // ---------- D-01. Día sin horario contratado (solo corre cuando hoy el niño no tiene horario, p. ej. domingo) ----------
+  // ---------- D-01. Día sin horario contratado: se quita el horario de hoy del tipo QA durante el caso ----------
   test('D-01: check-in en un día sin horario contratado (informativo)', async () => {
-    test.skip(a.hayHorario, 'Hoy el niño sí tiene horario: este caso corre en un día sin horario');
     test.info().annotations.push({ type: 'duda', description: 'Qué debe pasar con un check-in en un día no incluido en el tipo de enrolamiento (bloquear, permitir sin cargo o cobrar)' });
-    const r = await correr({ politica: FIJA, entrada: 8 * 60 + 6 });
-    console.log(`[D-01] sin horario: asistencia=${JSON.stringify(r.asistencia)} cargos=${JSON.stringify(r.cargos.map((c) => ({ evento: c.source_event, monto: c.amount, minutos: c.fee_breakdown && c.fee_breakdown.minutes_late })))}`);
+    await a.horarioDeHoy(false);
+    try {
+      const r = await correr({ politica: FIJA, entrada: 8 * 60 + 6 });
+      console.log(`[D-01] sin horario: asistencia=${JSON.stringify(r.asistencia)} cargos=${JSON.stringify(r.cargos.map((c) => ({ evento: c.source_event, monto: c.amount, minutos: c.fee_breakdown && c.fee_breakdown.minutes_late })))}`);
+    } finally {
+      await a.horarioDeHoy(true);
+    }
   });
 
   // Informativo: si el sistema rechaza horas futuras, los casos de la tarde solo pueden correr a partir de esa hora.

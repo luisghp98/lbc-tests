@@ -16,6 +16,9 @@ const APAGADAS = {
   early_drop_off_fee_amount: 0, early_drop_off_flat_fee_enabled: false, early_drop_off_per_minute_enabled: false, early_drop_off_per_minute_rate: 0,
 };
 
+// Tipo de matrícula propio de la prueba: 08:00-18:00 los siete días, para no depender del día en que se ejecute.
+const TIPO_QA = 'QA-825 Horario fijo';
+
 const aMinutos = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
 const aHora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}:00`;
 
@@ -37,6 +40,38 @@ class AsistenciaQA {
     const gmt = new Intl.DateTimeFormat('en-US', { timeZone: ZONA, timeZoneName: 'shortOffset' })
       .formatToParts(new Date(`${this.hoy}T12:00:00Z`)).find((x) => x.type === 'timeZoneName').value.match(/GMT([+-])(\d+)/);
     this.desfase = `${gmt[1]}${gmt[2].padStart(2, '0')}:00`;
+  }
+
+  /** Crea el tipo de matrícula QA (mismo producto que Full Time) con horario 08:00-18:00 todos los días. */
+  async crearTipo() {
+    const h = this.headers;
+    const base = (await rest('enrollment_types', { headers: h, query: 'name=eq.Full Time&deleted_at=is.null&select=product_service_id&limit=1' })).json[0];
+    const t = await rest('enrollment_types', { method: 'POST', headers: h, body: {
+      school_id: this.schoolId, product_service_id: base.product_service_id, name: TIPO_QA, description: 'QA automatizado: 08:00-18:00 todos los días', status: 'active', is_dropin: false,
+    } });
+    if (t.status >= 300) throw new Error(`No se pudo crear el tipo de matrícula QA: HTTP ${t.status} ${t.text}`);
+    this.tipoId = t.json[0].id;
+    const dias = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ school_id: this.schoolId, enrollment_type_id: this.tipoId, day_of_week: d, is_attending: true, start_time: '08:00:00', end_time: '18:00:00' }));
+    const s = await rest('enrollment_type_schedules', { method: 'POST', headers: h, body: dias });
+    if (s.status >= 300) throw new Error(`No se pudieron crear los horarios del tipo QA: HTTP ${s.status} ${s.text}`);
+  }
+
+  /** Da de baja (deleted_at) los tipos QA, incluidos los restos de corridas interrumpidas. */
+  async quitarTipos() {
+    const h = this.headers;
+    const ahora = new Date().toISOString();
+    const tipos = (await rest('enrollment_types', { headers: h, query: `name=eq.${encodeURIComponent(TIPO_QA)}&deleted_at=is.null&select=id` })).json || [];
+    for (const t of tipos) {
+      await rest('enrollment_type_schedules', { method: 'PATCH', headers: h, query: `enrollment_type_id=eq.${t.id}&deleted_at=is.null`, body: { deleted_at: ahora } });
+      await rest('enrollment_types', { method: 'PATCH', headers: h, query: `id=eq.${t.id}`, body: { deleted_at: ahora } });
+    }
+    console.log(`[ASIS] tipos QA dados de baja: ${tipos.length}`);
+  }
+
+  /** Quita (o devuelve) el horario de hoy del tipo QA: sirve para probar un día no contratado. */
+  async horarioDeHoy(activo) {
+    await rest('enrollment_type_schedules', { method: 'PATCH', headers: this.headers, query: `enrollment_type_id=eq.${this.tipoId}&day_of_week=eq.${this.diaSemana}`, body: { deleted_at: activo ? null : new Date().toISOString() } });
+    await this.usarNino(this.ninoId);
   }
 
   /** Asocia el niño y su horario contratado de hoy (null si hoy no tiene horario). */
@@ -98,4 +133,4 @@ class AsistenciaQA {
   }
 }
 
-module.exports = { AsistenciaQA };
+module.exports = { AsistenciaQA, TIPO_QA };
