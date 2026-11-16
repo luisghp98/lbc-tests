@@ -40,6 +40,8 @@ class QaCleanup {
       await rest('invoice_items', { method: 'DELETE', headers, query: `invoice_id=eq.${inv.id}` });
       await rest('invoices', { method: 'DELETE', headers, query: `id=eq.${inv.id}` });
     }
+    await rest('charges', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
+    await rest('attendance', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
     await rest('child_financial_responsibles', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
     await rest('child_families', { method: 'DELETE', headers, query: `child_id=eq.${id}` });
     // La matrícula del aula ocupa cupo y activa el ratio: se retira (status withdrawn), igual que la suite anterior.

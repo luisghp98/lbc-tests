@@ -5,6 +5,10 @@ name: E2E onboarding (preprod)
 on:
   workflow_dispatch:
     inputs:
+      carpeta:
+        description: Carpeta de pruebas dentro de e2e/tests (onboarding o asistencia)
+        required: false
+        default: onboarding
       grep:
         description: Filtro de pruebas (opcional, ej. CP-ONB-01)
         required: false
@@ -27,6 +31,7 @@ jobs:
       USER: ${{ secrets.LBC_USER }}
       PASSWORD: ${{ secrets.LBC_PASSWORD }}
       API_KEY: ${{ secrets.LBC_API_KEY }}
+      CARPETA: ${{ inputs.carpeta }}
       GREP: ${{ inputs.grep }}
       GREP_INVERT: ${{ inputs.grep_invert }}
       CHILD_ID: ${{ inputs.child_id }}
@@ -50,4 +55,4 @@ jobs:
           echo "api key: largo=${#API_KEY} empieza_por=${API_KEY:0:3}"
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test e2e/tests/onboarding ${GREP_INVERT:+--grep-invert "$GREP_INVERT"} --reporter=list ${GREP:+--grep "$GREP"}
+      - run: npx playwright test e2e/tests/${CARPETA:-onboarding} ${GREP_INVERT:+--grep-invert "$GREP_INVERT"} --reporter=list ${GREP:+--grep "$GREP"}
