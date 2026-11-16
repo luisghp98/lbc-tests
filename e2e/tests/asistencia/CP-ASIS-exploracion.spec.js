@@ -55,8 +55,9 @@ test.describe('ASIS: exploración de check-in tardío', { tag: '@asistencia' }, 
 
     const aula = (await rest('classroom_enrollments', { headers, query: `child_id=eq.${id}&select=classroom_id` })).json[0].classroom_id;
     const yo = (await request('/auth/v1/user', { headers })).json;
+    const perfil = (await rest('profiles', { headers, query: `user_id=eq.${yo.id}&select=id` })).json[0].id;
     const entrada = await rest('rpc/fn_manual_check_in_child', { method: 'POST', headers, body: {
-      p_child_id: id, p_classroom_id: aula, p_school_id: schoolId, p_authorized_by: yo.id, p_entry_method: 'manual_admin',
+      p_child_id: id, p_classroom_id: aula, p_school_id: schoolId, p_authorized_by: perfil, p_entry_method: 'manual_admin',
       p_exception_reason: 'QA automatizado', p_tutor_doc_verified: true, p_local_date: ymd, p_local_time: hora(6),
     } });
     console.log(`[ASIS] check-in ${ymd} ${hora(6)} (inicio ${dia.start_time}): HTTP ${entrada.status} ${String(entrada.text).slice(0, 400)}`);
@@ -67,7 +68,7 @@ test.describe('ASIS: exploración de check-in tardío', { tag: '@asistencia' }, 
       const [h2, m2] = dia.end_time.split(':').map(Number);
       const tarde = `${String(h2).padStart(2, '0')}:${String(m2 + 15).padStart(2, '0')}:00`;
       const salida = await rest('rpc/fn_manual_check_out_child', { method: 'POST', headers, body: {
-        p_attendance_id: asistencia[0].id, p_authorized_by: yo.id, p_exit_method: 'manual_admin', p_exception_reason: 'QA automatizado',
+        p_attendance_id: asistencia[0].id, p_authorized_by: perfil, p_exit_method: 'manual_admin', p_exception_reason: 'QA automatizado',
         p_tutor_doc_verified: true, p_local_time: tarde,
       } });
       console.log(`[ASIS] check-out ${tarde} (fin ${dia.end_time}): HTTP ${salida.status} ${String(salida.text).slice(0, 400)}`);
