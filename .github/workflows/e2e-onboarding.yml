@@ -12,9 +12,6 @@ on:
       grep:
         description: Filtro de pruebas (opcional, ej. CP-ONB-01)
         required: false
-      child_id:
-        description: Id de un niño a revisar en CP-ONB-11 (opcional)
-        required: false
       grep_invert:
         description: Pruebas a excluir (por defecto las @seguridad; pon NINGUNA para incluirlas)
         required: false
@@ -34,7 +31,6 @@ jobs:
       CARPETA: ${{ inputs.carpeta }}
       GREP: ${{ inputs.grep }}
       GREP_INVERT: ${{ inputs.grep_invert }}
-      CHILD_ID: ${{ inputs.child_id }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
