@@ -11,7 +11,7 @@ const haceAnios = (n) => { const d = new Date(); d.setFullYear(d.getFullYear() -
 test.describe('EXP-AULAS', () => {
   test.setTimeout(600_000);
   const limpieza = new QaCleanup(); const aulas = new AulasQA();
-  let page; let headers; let sinPersonal; let conAsignacion;
+  let page; let headers; let sinPersonal; let conAsignacion; let futura;
 
   test.beforeAll(async ({ browser }) => {
     page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
@@ -20,6 +20,7 @@ test.describe('EXP-AULAS', () => {
     await limpieza.sweep(headers); await aulas.sweep(headers);
     sinPersonal = await aulas.crear(headers, { etiqueta: 'SinPersonal', conPersonal: false });
     conAsignacion = await aulas.crear(headers, { etiqueta: 'ConAsignacion', conPersonal: true });
+    futura = await aulas.crear(headers, { etiqueta: 'AsignacionFutura', conPersonal: true, desde: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10) });
   });
   test.afterAll(async () => { const h = await asUser(); await limpieza.run(h); await aulas.limpiar(h); await page.context().close(); });
 
@@ -40,11 +41,15 @@ test.describe('EXP-AULAS', () => {
     await onb.siguiente('Next: Enrollment');
     await onb.matricula({ aula: null });
     const op = (n) => onb.opcionAula(n);
-    for (const a of [sinPersonal, conAsignacion]) {
+    for (const a of [sinPersonal, conAsignacion, futura]) {
       const o = await op(a.nombre);
       const n = await o.count();
       console.log(`[EXP] ${a.nombre.replace(/-[a-z]{4}$/, '')}: en el desplegable=${n > 0}${n > 0 ? `; deshabilitada=${await o.isDisabled()}; texto=${JSON.stringify((await o.innerText()).slice(0, 80))}` : ''}`);
     }
+    const todas = await page.getByRole('option').allInnerTexts();
+    console.log(`[EXP] opciones del desplegable: ${todas.length}; con [NO STAFF]: ${todas.filter((t) => t.includes('[NO STAFF]')).length}; con [NO RATIO]: ${todas.filter((t) => t.includes('[NO RATIO]')).length}`);
+    const asg = (await rest('classroom_staff_assignments', { headers, query: `classroom_id=in.(${[sinPersonal, conAsignacion, futura].map((a) => a.id).join(',')})&select=classroom_id,assigned_at,is_active,role` })).json || [];
+    console.log(`[EXP] asignaciones creadas: ${JSON.stringify(asg.map((x) => ({ aula: [sinPersonal, conAsignacion, futura].findIndex((a) => a.id === x.classroom_id), desde: x.assigned_at, activa: x.is_active })))}; fecha de hoy (UTC) ${new Date().toISOString().slice(0, 10)}`);
     for (const c of capturas) {
       const lista = Array.isArray(c.json) ? c.json : (c.json && typeof c.json === 'object' ? [c.json] : []);
       const qa = lista.filter((x) => JSON.stringify(x).includes('QA-1702'));
