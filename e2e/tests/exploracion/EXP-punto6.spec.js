@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { loginViaUI } = require('../../utils/auth');
 const { OnboardingPage, SLOW } = require('../../pages/OnboardingPage');
-const { asUser, rest } = require('../../utils/rest');
+const { asUser, rest, request } = require('../../utils/rest');
 const { qaChild, qaEmail, QaCleanup } = require('../../utils/qa');
 
 const haceAnios = (n) => { const d = new Date(); d.setFullYear(d.getFullYear() - n); return d; };
@@ -78,4 +78,27 @@ test.describe('EXP-P6', () => {
       console.log(`[EXP] ${metodo}: payment_methods=${JSON.stringify(pm.json).slice(0, 300)}; auditoría=${JSON.stringify(au.json).slice(0, 300)}`);
     });
   }
+
+  test('EXP-P6-02: botones, opciones y tablas', async () => {
+    test.fixme(!process.env.CI, 'Solo CI');
+    const spec = (await request('/rest/v1/', { headers })).json || {};
+    const defs = spec.definitions || {};
+    for (const t of Object.keys(defs).filter((x) => /allerg|medical_cond|special_need|family_member|child_famil|guardian|emergency|authorized_pick/i.test(x))) console.log(`[EXP] tabla ${t}: ${Object.keys(defs[t].properties || {}).join(', ')}`);
+    const onb = new OnboardingPage(page);
+    await onb.goto();
+    await onb.datosNino({ ...qaChild(), nacimiento: haceAnios(4) });
+    await onb.siguiente('Next: Family Member');
+    await onb.familiarNuevo(qaEmail());
+    const botones = () => page.locator('main button').evaluateAll((bs) => [...new Set(bs.map((b) => (b.getAttribute('aria-label') || b.textContent || '').trim().replace(/\s+/g, ' ')).filter((t) => t && t.length < 60))]);
+    const opciones = async (nombre) => { await page.getByRole('combobox', { name: nombre }).click(); const o = await page.getByRole('option').allInnerTexts(); await page.keyboard.press('Escape'); return o.map((t) => t.trim()); };
+    console.log(`[EXP] botones paso 2: ${JSON.stringify(await botones())}`);
+    console.log(`[EXP] opciones Relationship: ${JSON.stringify(await opciones(/Relationship to Child/))}`);
+    console.log(`[EXP] opciones Type of ID: ${JSON.stringify(await opciones(/Type of ID/))}`);
+    await onb.siguiente('Next: Medical Info');
+    await page.getByText('Step 3 of 4').waitFor({ timeout: 30_000 });
+    console.log(`[EXP] botones paso 3: ${JSON.stringify(await botones())}`);
+    console.log(`[EXP] opciones Severity: ${JSON.stringify(await opciones(/Severity/))}`);
+    const marcos = await page.locator('main [role="checkbox"], main input[type="checkbox"]').evaluateAll((cs) => cs.map((c) => c.getAttribute('aria-label') || c.id || c.name || ''));
+    console.log(`[EXP] casillas paso 3: ${JSON.stringify(marcos)}`);
+  });
 });
