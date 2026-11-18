@@ -1,7 +1,8 @@
 const { rest } = require('./rest');
 const { letters } = require('./qa');
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+// Ayer (UTC): la asignación ya está vigente en cualquier hora del día. Con la fecha de hoy en UTC, después de las 19:00 en Ecuador cuenta como "mañana".
+const hoy = () => new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
 /** Aulas de prueba (prefijo QA-1702) con o sin personal asignado, creadas por API y retiradas al final. */
 class AulasQA {

@@ -42,6 +42,29 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     await page.context().close();
   });
 
+
+  // Ficha del niño registrado, en el orden del punto 6 del ticket. Devuelve la factura de onboarding.
+  const fichaDelNino = async (id, { escenario, medicacion }) => {
+    const nf = (await rest('children', { headers, query: `id=eq.${id}&select=first_name,last_name,birth_date,gender,status,school_id,profile_picture_url` })).json[0];
+    const familias = (await rest('child_families', { headers, query: `child_id=eq.${id}&select=family_id` })).json || [];
+    const responsables = (await rest('child_financial_responsibles', { headers, query: `child_id=eq.${id}&select=id` })).json || [];
+    const asignacion = (await rest('classroom_enrollments', { headers, query: `child_id=eq.${id}&status=eq.active&select=classroom:classrooms(classroom_name)` })).json || [];
+    const ajustes = ((await rest('schools', { headers, query: `id=eq.${nf.school_id}&select=settings` })).json[0] || {}).settings || {};
+    const f0 = ((await rest('invoices', { headers, query: `child_id=eq.${id}&select=status,total_amount,recurring_payment_method_id` })).json || [])[0] || {};
+    ficha({
+      escenario,
+      basica: { nombre: nf.first_name, apellido: nf.last_name, nacimiento: nf.birth_date, genero: nf.gender, estado: nf.status, foto: !!nf.profile_picture_url },
+      medica: medicacion,
+      familiar: { nombre: 'QA-Parent QA-Familiar', documento: 'Passport', familiaAsociada: familias.length > 0, responsableFinanciero: responsables.length > 0 },
+      enrolamiento: {
+        tipo: 'Full Time', aula: asignacion[0] && asignacion[0].classroom ? asignacion[0].classroom.classroom_name : null,
+        forzamientoRatioNino: ajustes.enforce_child_ratio ? 'ACTIVO' : 'INACTIVO', forzamientoRatioStaff: ajustes.enforce_staff_ratio ? 'ACTIVO' : 'INACTIVO',
+      },
+      facturacion: { metodoDePago: 'No seleccionado', autorizacionRecurrente: 'No marcada', factura: f0.status, total: Number(f0.total_amount), asociadaAMetodoDePago: !!f0.recurring_payment_method_id },
+    });
+    return f0;
+  };
+
   test('CP-ONB-01: registro completo con foto, medicación y primera aula habilitada', async () => {
     const onb = new OnboardingPage(page);
     const nino = qaChild();
@@ -91,22 +114,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     expect((await facturas())[0].recurring_payment_method_id, 'sin recurrencia, la factura no se asocia a un método de pago').toBeNull();
 
     // Punto 6: ficha del niño registrado, en el orden del ticket (básica, médica, padre/guardian, enrolamiento, facturación).
-    const nf = (await rest('children', { headers, query: `id=eq.${id}&select=first_name,last_name,birth_date,gender,status,school_id,profile_picture_url` })).json[0];
-    const familias = (await rest('child_families', { headers, query: `child_id=eq.${id}&select=family_id` })).json || [];
-    const responsables = (await rest('child_financial_responsibles', { headers, query: `child_id=eq.${id}&select=id` })).json || [];
-    const asignacion = (await rest('classroom_enrollments', { headers, query: `child_id=eq.${id}&status=eq.active&select=classroom:classrooms(classroom_name)` })).json || [];
-    const ajustes = ((await rest('schools', { headers, query: `id=eq.${nf.school_id}&select=settings` })).json[0] || {}).settings || {};
-    const f0 = (await facturas())[0];
-    ficha({
-      basica: { nombre: nf.first_name, apellido: nf.last_name, nacimiento: nf.birth_date, genero: nf.gender, estado: nf.status, foto: !!nf.profile_picture_url },
-      medica: { medicamento: 'QA-Medicina', inicio: ymd(enDias(0)), fin: ymd(enDias(1)), visibleEnElDetalle: true },
-      familiar: { nombre: 'QA-Parent QA-Familiar', documento: 'Passport', familiaAsociada: familias.length > 0, responsableFinanciero: responsables.length > 0 },
-      enrolamiento: {
-        tipo: 'Full Time', aula: asignacion[0] && asignacion[0].classroom ? asignacion[0].classroom.classroom_name : null,
-        forzamientoRatioNino: ajustes.enforce_child_ratio ? 'ACTIVO' : 'INACTIVO', forzamientoRatioStaff: ajustes.enforce_staff_ratio ? 'ACTIVO' : 'INACTIVO',
-      },
-      facturacion: { metodoDePago: 'No seleccionado', autorizacionRecurrente: 'No marcada', factura: f0.status, total: Number(f0.total_amount), asociadaAMetodoDePago: !!f0.recurring_payment_method_id },
-    });
+    const f0 = await fichaDelNino(id, { escenario: 'Registro completo con foto y medicación', medicacion: { medicamento: 'QA-Medicina', inicio: ymd(enDias(0)), fin: ymd(enDias(1)), visibleEnElDetalle: true } });
     informar('CP-ONB-01', `niño creado: sí; matrícula con tipo Full Time: sí; factura ${f0.status} por $${Number(f0.total_amount).toFixed(2)}; medicación visible en el detalle: sí; sin recurrencia la factura queda sin método de pago: sí`);
   });
 
@@ -127,7 +135,8 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     const conAsignacion = await onb.opcionAula(aulaConAsignacion.nombre);
     const seleccionable = (await conAsignacion.count()) > 0 && (await conAsignacion.isEnabled());
     expect(seleccionable, 'un aula sin personal presente no debe poder elegirse').toBeFalsy();
-    informar('CP-ONB-02', `aula sin personal: deshabilitada con [NO STAFF]; aula con personal sin presencia: ${seleccionable ? 'seleccionable' : 'no seleccionable'}`);
+    const oculta = (await conAsignacion.count()) === 0;
+    informar('CP-ONB-02', `aula sin personal: deshabilitada con [NO STAFF]; aula con personal asignado y sin presencia: ${seleccionable ? 'seleccionable' : oculta ? 'no aparece en la lista' : 'aparece cerrada'}`);
   });
 
   test('CP-ONB-03: la foto admite JPEG, PNG y WebP hasta 5 MiB y rechaza el resto', async () => {
@@ -320,5 +329,42 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     }
     pagos(filas);
     informar('CP-ONB-09', filas.map((x) => x.total === null ? `${x.metodo}: no avanza sin datos de pago` : `${x.metodo}: factura ${x.estado} por $${x.total.toFixed(2)}`).join(' | '));
+  });
+
+  // Punto 6 (enrolamiento): forzamiento de ratio activo e inactivo (LBC-366). El estado se cambia en la escuela y se restaura al terminar.
+  test('CP-ONB-10: forzamiento de ratio activo e inactivo: el registro se completa y el informe refleja el estado', async () => {
+    const onb = new OnboardingPage(page);
+    const escuelaId = (await rest('staff', { headers, query: 'limit=1&select=school_id' })).json[0].school_id;
+    const original = (await rest('schools', { headers, query: `id=eq.${escuelaId}&select=settings` })).json[0].settings;
+    const filas = [];
+    try {
+      for (const [estado, valor] of [['ACTIVO', true], ['INACTIVO', false]]) {
+        const cambio = await rest('schools', { method: 'PATCH', headers, query: `id=eq.${escuelaId}`, body: { settings: { ...original, enforce_child_ratio: valor } } });
+        expect(cambio.status, `se debe poder poner el forzamiento ${estado}`).toBeLessThan(300);
+        await onb.goto();
+        await onb.datosNino({ ...qaChild(), nacimiento: haceAnios(4) });
+        await onb.siguiente('Next: Family Member');
+        await onb.familiarNuevo(qaEmail());
+        await onb.siguiente('Next: Medical Info');
+        await onb.siguiente('Next: Enrollment');
+        await onb.matricula({ aula: null });
+        // LBC-366: en cualquier estado del forzamiento, un aula sin personal ni ratio sigue cerrada.
+        await expect(await onb.opcionAula(aulaSinPersonal.nombre), `con el forzamiento ${estado} un aula sin personal ni ratio sigue cerrada`).toBeDisabled();
+        await page.keyboard.press('Escape');
+        await onb.primeraHabilitada(/Classroom/);
+        const envio = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/admin/children/new'), { timeout: SLOW });
+        await onb.completar();
+        await envio;
+        await page.waitForURL(/\/admin\/children\/[0-9a-f-]{36}/, { timeout: 120_000 });
+        const id = page.url().match(/children\/([0-9a-f-]{36})/)[1];
+        limpieza.trackChild(id);
+        await expect.poll(async () => ((await rest('invoices', { headers, query: `child_id=eq.${id}&select=id` })).json || []).length, { timeout: 120_000, message: 'se genera la factura de onboarding' }).toBeGreaterThan(0);
+        const f = await fichaDelNino(id, { escenario: `Forzamiento de ratio ${estado}`, medicacion: null });
+        filas.push(`${estado}: registro completado, factura ${f.status}; aula sin personal ni ratio cerrada`);
+      }
+    } finally {
+      await rest('schools', { method: 'PATCH', headers, query: `id=eq.${escuelaId}`, body: { settings: original } });
+    }
+    informar('CP-ONB-10', filas.join(' | '));
   });
 });
