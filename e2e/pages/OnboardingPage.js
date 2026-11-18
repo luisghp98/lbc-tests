@@ -94,7 +94,7 @@ class OnboardingPage {
   }
 
   async necesidades(texto) {
-    await this.page.getByPlaceholder('Special needs and accommodations').fill(texto);
+    await this.page.getByRole('textbox', { name: /Special needs/i }).fill(texto);
   }
 
   async medicacion({ nombre, dosis, frecuencia, instrucciones, inicio, fin }) {
