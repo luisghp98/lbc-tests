@@ -55,6 +55,13 @@ test.describe('EXP-PAGO', () => {
       limpieza.trackChild(id);
       await expect.poll(async () => ((await rest('invoices', { headers, query: `child_id=eq.${id}&select=id` })).json || []).length, { timeout: 120_000 }).toBeGreaterThan(0);
       const facturas = (await rest('invoices', { headers, query: `child_id=eq.${id}&select=*` })).json;
+      const fam = facturas[0].family_id;
+      const pm = await rest('payment_methods', { headers, query: `family_id=eq.${fam}&select=type,provider,is_default,is_active,is_recurring_enabled,is_backup,nickname` });
+      console.log(`[EXP] ${metodo}: payment_methods de la familia: HTTP ${pm.status} ${JSON.stringify(pm.json).slice(0, 400)}`);
+      const au = await rest('payment_method_audit_logs', { headers, query: `family_id=eq.${fam}&select=action,result,provider,source,error_code` });
+      console.log(`[EXP] ${metodo}: auditoría de métodos de pago: HTTP ${au.status} ${JSON.stringify(au.json).slice(0, 400)}`);
+      const it = await rest('invoice_items', { headers, query: `invoice_id=eq.${facturas[0].id}&select=description,quantity,unit_price,total_amount,is_recurring` });
+      console.log(`[EXP] ${metodo}: conceptos de la factura: HTTP ${it.status} ${JSON.stringify(it.json).slice(0, 500)}`);
       for (const f of facturas) console.log(`[EXP] ${metodo}: factura ${JSON.stringify(Object.fromEntries(Object.entries(f).filter(([, v]) => v !== null)))}`);
     });
   }
