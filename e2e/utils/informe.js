@@ -3,4 +3,6 @@
 const informar = (cp, texto) => console.log(`[RESULTADO] ${cp} | ${texto}`);
 const ficha = (datos) => console.log(`[FICHA] ${JSON.stringify(datos)}`);
 
-module.exports = { informar, ficha };
+const pagos = (filas) => console.log(`[PAGOS] ${JSON.stringify(filas)}`);
+
+module.exports = { informar, ficha, pagos };

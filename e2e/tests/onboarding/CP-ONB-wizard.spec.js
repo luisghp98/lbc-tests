@@ -5,7 +5,7 @@ const { asUser, rest, request } = require('../../utils/rest');
 const { qaChild, qaEmail, QaCleanup } = require('../../utils/qa');
 const { AulasQA } = require('../../utils/aulas');
 const { png, desdeNavegador, archivo } = require('../../utils/imagen');
-const { informar, ficha } = require('../../utils/informe');
+const { informar, ficha, pagos } = require('../../utils/informe');
 
 const MB = 1024 * 1024;
 const enDias = (n) => new Date(Date.now() + n * 86400000);
@@ -270,5 +270,55 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     informar('CP-ONB-08', `casilla visible por método: ${JSON.stringify(visibles)}`);
     expect(visibles.Card && visibles.ACH, 'con Card y ACH debe mostrarse').toBeTruthy();
     expect([visibles.Cash, visibles.Check, visibles['Bank Transfer']], 'con Cash, Check y Bank Transfer no debe mostrarse').toEqual([false, false, false]);
+  });
+
+  // Punto 6 (facturación) y puntos 4 y 5: cada método de pago. Con Card y ACH el wizard pide datos de pago, que la automatización no escribe:
+  // solo se comprueba que no avanza sin ellos. Con Cash, Check y Bank Transfer se completa el registro y se revisa la factura.
+  test('CP-ONB-09: cada método de pago: el registro avanza (o pide datos de pago) y la factura se genera bien', async () => {
+    const onb = new OnboardingPage(page);
+    const filas = [];
+    for (const metodo of ['Card', 'ACH', 'Cash', 'Check', 'Bank Transfer']) {
+      const nino = qaChild();
+      await onb.goto();
+      await onb.datosNino({ ...nino, nacimiento: haceAnios(4) });
+      await onb.siguiente('Next: Family Member');
+      await onb.familiarNuevo(qaEmail());
+      await onb.metodoPago(metodo);
+      await onb.siguiente('Next: Medical Info');
+      const avanza = await page.getByText('Step 3 of 4').waitFor({ timeout: 10_000 }).then(() => true, () => false);
+
+      if (['Card', 'ACH'].includes(metodo)) {
+        expect(avanza, `${metodo}: el wizard no debe avanzar sin datos de pago`).toBeFalsy();
+        const creados = (await rest('children', { headers, query: `last_name=eq.${nino.lastName}&select=id` })).json || [];
+        expect(creados, `${metodo}: sin datos de pago no se crea el niño`).toHaveLength(0);
+        filas.push({ metodo, registro: 'No avanza sin datos de pago', factura: '—', total: null, estado: '—', metodoAsociado: '—', nota: 'La verificación con datos de pago es manual (la automatización no escribe datos de pago)' });
+        continue;
+      }
+
+      expect(avanza, `${metodo}: no requiere datos de pago, el wizard debe avanzar`).toBeTruthy();
+      await onb.siguiente('Next: Enrollment');
+      await onb.matricula({ aula: 'habilitada' });
+      const envio = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/admin/children/new'), { timeout: SLOW });
+      await onb.completar();
+      await envio;
+      await page.waitForURL(/\/admin\/children\/[0-9a-f-]{36}/, { timeout: 120_000 });
+      const id = page.url().match(/children\/([0-9a-f-]{36})/)[1];
+      limpieza.trackChild(id);
+
+      const leer = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=invoice_number,status,subtotal,tax_amount,discount_amount,total_amount,amount_paid,balance_due,issue_date,due_date,family_id,recurring_payment_method_id` })).json || [];
+      await expect.poll(async () => (await leer()).length, { timeout: 120_000, message: `${metodo}: se genera la factura de onboarding` }).toBeGreaterThan(0);
+      const f = (await leer())[0];
+      const n = (x) => Number(x);
+      expect(f.status, `${metodo}: la factura queda pendiente`).toBe('pending');
+      expect(n(f.total_amount), `${metodo}: la factura tiene importe`).toBeGreaterThan(0);
+      expect(n(f.total_amount), `${metodo}: total = subtotal + impuesto - descuento`).toBeCloseTo(n(f.subtotal) + n(f.tax_amount) - n(f.discount_amount), 2);
+      expect(n(f.balance_due), `${metodo}: saldo = total - pagado`).toBeCloseTo(n(f.total_amount) - n(f.amount_paid), 2);
+      expect(f.due_date > f.issue_date, `${metodo}: el vencimiento es posterior a la emisión`).toBeTruthy();
+      expect(f.family_id, `${metodo}: la factura queda asociada a la familia`).toBeTruthy();
+      expect(f.recurring_payment_method_id, `${metodo}: sin recurrencia la factura no se asocia a un método de pago`).toBeNull();
+      filas.push({ metodo, registro: 'Completado', factura: f.invoice_number, total: n(f.total_amount), estado: f.status, metodoAsociado: 'No', nota: 'El método elegido no se guarda (no hay datos de pago que registrar)' });
+    }
+    pagos(filas);
+    informar('CP-ONB-09', filas.map((x) => x.total === null ? `${x.metodo}: no avanza sin datos de pago` : `${x.metodo}: factura ${x.estado} por $${x.total.toFixed(2)}`).join(' | '));
   });
 });
