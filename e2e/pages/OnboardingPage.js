@@ -65,7 +65,7 @@ class OnboardingPage {
     await this.page.locator('#parent-info-government-id-last-4-characters-2').fill('A123');
     await this.page.locator('#parent-info-phone-2').fill('5552345678');
     if (extra.parentesco) await this.elegir(/Relationship to Child/, extra.parentesco);
-    const marcar = { principal: /Primary Contact/i, recoger: /Authorized to Pick Up Child/i, medico: /Can Authorize Medical Treatment/i, actividades: /Can Authorize Activities/i };
+    const marcar = { principal: /Primary contact/i, recoger: /Authorized for pickup/i, medico: /Medical authorization/i, actividades: /Activities authorization/i };
     for (const [clave, nombre] of Object.entries(marcar)) if (extra[clave]) await this.page.getByRole('checkbox', { name: nombre }).check();
     await this.page.getByRole('checkbox', { name: /All Required Documents Submitted/ }).check();
   }
