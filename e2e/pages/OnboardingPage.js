@@ -55,7 +55,7 @@ class OnboardingPage {
   }
 
   // Paso 2: familiar nuevo (no se guarda nada hasta completar el registro)
-  async familiarNuevo(email) {
+  async familiarNuevo(email, extra = {}) {
     await this.page.getByPlaceholder('Search by name or email').fill(email);
     await this.page.locator('button', { hasText: 'Search' }).click();
     await expect(this.page.getByRole('heading', { name: 'Create New Family Member Profile' })).toBeVisible({ timeout: SLOW });
@@ -64,6 +64,9 @@ class OnboardingPage {
     await this.elegir(/Type of ID/, 'Passport');
     await this.page.locator('#parent-info-government-id-last-4-characters-2').fill('A123');
     await this.page.locator('#parent-info-phone-2').fill('5552345678');
+    if (extra.parentesco) await this.elegir(/Relationship to Child/, extra.parentesco);
+    const marcar = { principal: /Primary Contact/i, recoger: /Authorized to Pick Up Child/i, medico: /Can Authorize Medical Treatment/i, actividades: /Can Authorize Activities/i };
+    for (const [clave, nombre] of Object.entries(marcar)) if (extra[clave]) await this.page.getByRole('checkbox', { name: nombre }).check();
     await this.page.getByRole('checkbox', { name: /All Required Documents Submitted/ }).check();
   }
 
@@ -72,8 +75,33 @@ class OnboardingPage {
   }
 
   // Paso 3
-  async medicacion({ nombre, inicio, fin }) {
+  /** Campo de texto por su etiqueta (algunas etiquetas no están asociadas al campo: se usa el primero que la sigue). */
+  campo(etiqueta) {
+    return this.page.getByLabel(etiqueta, { exact: true })
+      .or(this.page.locator(`xpath=//label[normalize-space()="${etiqueta}"]/following::input[1]`)).first();
+  }
+
+  async alergia(texto) {
+    await this.page.getByPlaceholder('Type allergy and press Enter').fill(texto);
+    await this.page.getByRole('button', { name: 'Add allergy' }).click();
+  }
+
+  async condicion({ nombre, severidad, notas }) {
+    await this.page.getByPlaceholder('e.g., Asthma').fill(nombre);
+    if (severidad) await this.elegir(/Severity/, severidad);
+    if (notas) await this.page.getByPlaceholder('e.g., Keep the inhaler nearby').fill(notas);
+    await this.page.getByRole('button', { name: 'Add condition' }).click();
+  }
+
+  async necesidades(texto) {
+    await this.page.getByPlaceholder('Special needs and accommodations').fill(texto);
+  }
+
+  async medicacion({ nombre, dosis, frecuencia, instrucciones, inicio, fin }) {
     await this.page.getByPlaceholder('e.g., Albuterol').fill(nombre);
+    if (dosis) await this.campo('Dosage').fill(dosis);
+    if (frecuencia) await this.campo('Frequency').fill(frecuencia);
+    if (instrucciones) await this.page.getByPlaceholder('e.g., Administer after lunch').fill(instrucciones);
     const fechas = this.page.locator('button', { hasText: 'Select date' });
     await this.fecha(fechas.nth(0), inicio, 'adelante');
     if (fin) await this.fecha(this.page.locator('button', { hasText: 'Select date' }).first(), fin, 'adelante');

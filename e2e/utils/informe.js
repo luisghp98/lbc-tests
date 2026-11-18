@@ -5,4 +5,6 @@ const ficha = (datos) => console.log(`[FICHA] ${JSON.stringify(datos)}`);
 
 const pagos = (filas) => console.log(`[PAGOS] ${JSON.stringify(filas)}`);
 
-module.exports = { informar, ficha, pagos };
+const recurrencia = (filas) => console.log(`[RECURRENCIA] ${JSON.stringify(filas)}`);
+
+module.exports = { informar, ficha, pagos, recurrencia };

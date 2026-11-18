@@ -5,13 +5,18 @@ const { asUser, rest, request } = require('../../utils/rest');
 const { qaChild, qaEmail, QaCleanup } = require('../../utils/qa');
 const { AulasQA } = require('../../utils/aulas');
 const { png, desdeNavegador, archivo } = require('../../utils/imagen');
-const { informar, ficha, pagos } = require('../../utils/informe');
+const { informar, ficha, pagos, recurrencia } = require('../../utils/informe');
 
 const MB = 1024 * 1024;
 const enDias = (n) => new Date(Date.now() + n * 86400000);
 const ymd = (d) => d.toLocaleDateString('en-CA');
 const MESES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const etiquetaDia = (d) => `${MESES[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+// Datos médicos que se registran en el paso 3 y se buscan después en el detalle del niño.
+const MED = {
+  alergia: 'QA-Alergia', condicion: 'QA-Asma', severidad: 'Moderate', notasCondicion: 'QA-Notas-condicion',
+  medicamento: 'QA-Medicina', dosis: 'QA-5-ml', frecuencia: 'QA-Cada-8-horas', instrucciones: 'QA-Instrucciones', necesidades: 'QA-Necesidad-especial',
+};
 const haceAnios = (n) => { const d = new Date(); d.setFullYear(d.getFullYear() - n); return d; };
 
 test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, () => {
@@ -43,24 +48,44 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   });
 
 
+  // Texto del detalle del niño con sus tres pestañas abiertas (el contenido de las no abiertas puede no estar en el DOM).
+  const textoDelDetalle = async () => {
+    let todo = '';
+    for (const pestana of ['General information', 'Family & billing', 'Medical & attendance']) {
+      await page.getByText(pestana, { exact: true }).first().click();
+      await expect(page.locator('main')).not.toContainText('Loading', { timeout: 60_000 }).catch(() => {});
+      todo += ' ' + (await page.locator('main').evaluate((el) => el.textContent));
+    }
+    return todo.replace(/\s+/g, ' ');
+  };
+
   // Ficha del niño registrado, en el orden del punto 6 del ticket. Devuelve la factura de onboarding.
-  const fichaDelNino = async (id, { escenario, medicacion }) => {
+  const fichaDelNino = async (id, { escenario, medica }) => {
     const nf = (await rest('children', { headers, query: `id=eq.${id}&select=first_name,last_name,birth_date,gender,status,school_id,profile_picture_url` })).json[0];
     const familias = (await rest('child_families', { headers, query: `child_id=eq.${id}&select=family_id` })).json || [];
     const responsables = (await rest('child_financial_responsibles', { headers, query: `child_id=eq.${id}&select=id` })).json || [];
+    const miembros = familias[0] ? (await rest('family_members', { headers, query: `family_id=eq.${familias[0].family_id}&select=relationship,is_primary_contact,can_pickup,can_authorize_medical,can_authorize_activities,payment_method_preference` })).json || [] : [];
+    const m0 = miembros[0] || {};
     const asignacion = (await rest('classroom_enrollments', { headers, query: `child_id=eq.${id}&status=eq.active&select=classroom:classrooms(classroom_name)` })).json || [];
     const ajustes = ((await rest('schools', { headers, query: `id=eq.${nf.school_id}&select=settings` })).json[0] || {}).settings || {};
     const f0 = ((await rest('invoices', { headers, query: `child_id=eq.${id}&select=status,total_amount,recurring_payment_method_id` })).json || [])[0] || {};
     ficha({
       escenario,
       basica: { nombre: nf.first_name, apellido: nf.last_name, nacimiento: nf.birth_date, genero: nf.gender, estado: nf.status, foto: !!nf.profile_picture_url },
-      medica: medicacion,
-      familiar: { nombre: 'QA-Parent QA-Familiar', documento: 'Passport', familiaAsociada: familias.length > 0, responsableFinanciero: responsables.length > 0 },
+      medica,
+      familiar: {
+        nombre: 'QA-Parent QA-Familiar', documento: 'Passport', parentesco: m0.relationship || null, contactoPrincipal: !!m0.is_primary_contact,
+        autorizadoRecoger: !!m0.can_pickup, autorizaTratamientoMedico: !!m0.can_authorize_medical, autorizaActividades: !!m0.can_authorize_activities,
+        familiaAsociada: familias.length > 0, responsableFinanciero: responsables.length > 0,
+      },
       enrolamiento: {
         tipo: 'Full Time', aula: asignacion[0] && asignacion[0].classroom ? asignacion[0].classroom.classroom_name : null,
         forzamientoRatioNino: ajustes.enforce_child_ratio ? 'ACTIVO' : 'INACTIVO', forzamientoRatioStaff: ajustes.enforce_staff_ratio ? 'ACTIVO' : 'INACTIVO',
       },
-      facturacion: { metodoDePago: 'No seleccionado', autorizacionRecurrente: 'No marcada', factura: f0.status, total: Number(f0.total_amount), asociadaAMetodoDePago: !!f0.recurring_payment_method_id },
+      facturacion: {
+        metodoDePago: 'No seleccionado', metodoGuardadoEnLaFamilia: m0.payment_method_preference || null, autorizacionRecurrente: 'No marcada',
+        factura: f0.status, total: Number(f0.total_amount), asociadaAMetodoDePago: !!f0.recurring_payment_method_id,
+      },
     });
     return f0;
   };
@@ -72,10 +97,15 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     await onb.datosNino({ ...nino, nacimiento: haceAnios(4), foto: archivo('foto-qa.png', 'image/png', png(1 * MB)) });
     await expect(onb.errorFoto()).toHaveCount(0);
     await onb.siguiente('Next: Family Member');
-    await onb.familiarNuevo(qaEmail());
+    await onb.familiarNuevo(qaEmail(), { parentesco: 'Mother', principal: true, recoger: true, medico: true, actividades: true });
     await onb.siguiente('Next: Medical Info');
-    await onb.medicacion({ nombre: 'QA-Medicina', inicio: enDias(0), fin: enDias(1) });
-    await expect(page.getByText('QA-Medicina').first(), 'la medicación añadida debe aparecer en la lista del paso 3').toBeVisible();
+    await onb.alergia(MED.alergia);
+    await expect(page.getByText(MED.alergia).first(), 'la alergia añadida debe aparecer en la lista del paso 3').toBeVisible();
+    await onb.condicion({ nombre: MED.condicion, severidad: MED.severidad, notas: MED.notasCondicion });
+    await expect(page.getByText(MED.condicion).first(), 'la condición añadida debe aparecer en la lista del paso 3').toBeVisible();
+    await onb.medicacion({ nombre: MED.medicamento, dosis: MED.dosis, frecuencia: MED.frecuencia, instrucciones: MED.instrucciones, inicio: enDias(0), fin: enDias(1) });
+    await expect(page.getByText(MED.medicamento).first(), 'la medicación añadida debe aparecer en la lista del paso 3').toBeVisible();
+    await onb.necesidades(MED.necesidades);
     await onb.siguiente('Next: Enrollment');
     await onb.matricula({ aula: 'habilitada' });
 
@@ -102,20 +132,30 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     const tipo = (await rest('enrollment_types', { headers, query: `name=eq.${encodeURIComponent('Full Time')}&deleted_at=is.null&select=id` })).json[0];
     expect(matriculas.json[0].enrollment_type_id, 'la matrícula debe quedar con el tipo de enrolamiento elegido').toBe(tipo.id);
 
-    // Punto 2: la medicación registrada en el paso 3 se ve en el detalle del niño (la tabla `medications` no es legible con este rol).
-    await expect(page.locator('main'), 'la medicación registrada debe verse en el detalle del niño').toContainText('QA-Medicina', { timeout: 60_000 });
-    const detalle = (await page.locator('main').evaluate((el) => el.textContent)).replace(/\s+/g, ' ');
-    const i = detalle.indexOf('QA-Medicina');
-    console.log(`[CP-ONB-01] medicación en el detalle: ${detalle.slice(Math.max(0, i - 60), i + 220)}`);
-    const filas = (await rest('medications', { headers, query: `child_id=eq.${id}&select=start_date,end_date` })).json || [];
-    console.log(`[CP-ONB-01] filas en la tabla medications visibles para el rol: ${filas.length}`);
+    // Punto 2: los datos médicos del paso 3 se ven en el detalle del niño (la tabla `medications` no es legible con este rol).
+    await expect(page.locator('main'), 'la medicación registrada debe verse en el detalle del niño').toContainText(MED.medicamento, { timeout: 60_000 });
+    const detalle = await textoDelDetalle();
+    const guardado = {
+      alergia: detalle.includes(MED.alergia), condicion: detalle.includes(MED.condicion), severidad: detalle.includes(MED.severidad),
+      notasCondicion: detalle.includes(MED.notasCondicion), medicamento: detalle.includes(MED.medicamento), dosis: detalle.includes(MED.dosis),
+      frecuencia: detalle.includes(MED.frecuencia), instrucciones: detalle.includes(MED.instrucciones), necesidades: detalle.includes(MED.necesidades),
+    };
+    console.log(`[CP-ONB-01] datos médicos visibles en el detalle: ${JSON.stringify(guardado)}`);
+    expect(guardado, 'los datos médicos registrados deben verse en el detalle del niño').toEqual(expect.objectContaining({ alergia: true, condicion: true, medicamento: true, necesidades: true }));
 
     // Punto 5: sin autorización de débito recurrente, la factura queda sin método de pago asociado.
     expect((await facturas())[0].recurring_payment_method_id, 'sin recurrencia, la factura no se asocia a un método de pago').toBeNull();
 
     // Punto 6: ficha del niño registrado, en el orden del ticket (básica, médica, padre/guardian, enrolamiento, facturación).
-    const f0 = await fichaDelNino(id, { escenario: 'Registro completo con foto y medicación', medicacion: { medicamento: 'QA-Medicina', inicio: ymd(enDias(0)), fin: ymd(enDias(1)), visibleEnElDetalle: true } });
-    informar('CP-ONB-01', `niño creado: sí; matrícula con tipo Full Time: sí; factura ${f0.status} por $${Number(f0.total_amount).toFixed(2)}; medicación visible en el detalle: sí; sin recurrencia la factura queda sin método de pago: sí`);
+    const f0 = await fichaDelNino(id, {
+      escenario: 'Registro completo con foto, datos médicos y familiar',
+      medica: {
+        alergia: MED.alergia, condicion: MED.condicion, severidad: MED.severidad, notasCondicion: MED.notasCondicion,
+        medicamento: MED.medicamento, dosis: MED.dosis, frecuencia: MED.frecuencia, instrucciones: MED.instrucciones, inicio: ymd(enDias(0)), fin: ymd(enDias(1)),
+        necesidades: MED.necesidades, visiblesEnElDetalle: guardado,
+      },
+    });
+    informar('CP-ONB-01', `niño creado: sí; matrícula con tipo Full Time: sí; factura ${f0.status} por $${Number(f0.total_amount).toFixed(2)}; datos médicos visibles en el detalle: sí; sin recurrencia la factura queda sin método de pago: sí`);
   });
 
   test('CP-ONB-02: aulas sin personal o con personal sin presencia quedan cerradas en el paso 4', async () => {
@@ -300,7 +340,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
         expect(avanza, `${metodo}: el wizard no debe avanzar sin datos de pago`).toBeFalsy();
         const creados = (await rest('children', { headers, query: `last_name=eq.${nino.lastName}&select=id` })).json || [];
         expect(creados, `${metodo}: sin datos de pago no se crea el niño`).toHaveLength(0);
-        filas.push({ metodo, registro: 'No avanza sin datos de pago', factura: '—', total: null, estado: '—', metodoAsociado: '—', nota: 'La verificación con datos de pago es manual (la automatización no escribe datos de pago)' });
+        filas.push({ metodo, registro: 'No avanza sin datos de pago', factura: '—', total: null, estado: '—', metodoAsociado: '—', guardadoEnLaFamilia: '—', nota: 'La verificación con datos de pago es manual (la automatización no escribe datos de pago)' });
         continue;
       }
 
@@ -315,6 +355,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
       limpieza.trackChild(id);
 
       const leer = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=invoice_number,status,subtotal,tax_amount,discount_amount,total_amount,amount_paid,balance_due,issue_date,due_date,family_id,recurring_payment_method_id` })).json || [];
+      const guardadoEnLaFamilia = async (familia) => ((await rest('family_members', { headers, query: `family_id=eq.${familia}&select=payment_method_preference` })).json || [{}])[0].payment_method_preference || 'ninguno';
       await expect.poll(async () => (await leer()).length, { timeout: 120_000, message: `${metodo}: se genera la factura de onboarding` }).toBeGreaterThan(0);
       const f = (await leer())[0];
       const n = (x) => Number(x);
@@ -325,7 +366,8 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
       expect(f.due_date > f.issue_date, `${metodo}: el vencimiento es posterior a la emisión`).toBeTruthy();
       expect(f.family_id, `${metodo}: la factura queda asociada a la familia`).toBeTruthy();
       expect(f.recurring_payment_method_id, `${metodo}: sin recurrencia la factura no se asocia a un método de pago`).toBeNull();
-      filas.push({ metodo, registro: 'Completado', factura: f.invoice_number, total: n(f.total_amount), estado: f.status, metodoAsociado: 'No', nota: 'El método elegido no se guarda (no hay datos de pago que registrar)' });
+      const guardado = await guardadoEnLaFamilia(f.family_id);
+      filas.push({ metodo, registro: 'Completado', factura: f.invoice_number, total: n(f.total_amount), estado: f.status, metodoAsociado: 'No', guardadoEnLaFamilia: guardado, nota: 'Sin datos de pago no se registra un método de pago; la factura no se asocia a ninguno' });
     }
     pagos(filas);
     informar('CP-ONB-09', filas.map((x) => x.total === null ? `${x.metodo}: no avanza sin datos de pago` : `${x.metodo}: factura ${x.estado} por $${x.total.toFixed(2)}`).join(' | '));
@@ -359,12 +401,48 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
         const id = page.url().match(/children\/([0-9a-f-]{36})/)[1];
         limpieza.trackChild(id);
         await expect.poll(async () => ((await rest('invoices', { headers, query: `child_id=eq.${id}&select=id` })).json || []).length, { timeout: 120_000, message: 'se genera la factura de onboarding' }).toBeGreaterThan(0);
-        const f = await fichaDelNino(id, { escenario: `Forzamiento de ratio ${estado}`, medicacion: null });
+        const f = await fichaDelNino(id, { escenario: `Forzamiento de ratio ${estado}`, medica: null });
         filas.push(`${estado}: registro completado, factura ${f.status}; aula sin personal ni ratio cerrada`);
       }
     } finally {
       await rest('schools', { method: 'PATCH', headers, query: `id=eq.${escuelaId}`, body: { settings: original } });
     }
     informar('CP-ONB-10', filas.join(' | '));
+  });
+
+  // Punto 5 del ticket con los métodos que no piden datos de pago: la autorización de recurrencia se marca y se revisa la factura.
+  test('CP-ONB-11: autorización de recurrencia marcada con Cash, Check y Bank Transfer: la factura se genera', async () => {
+    const onb = new OnboardingPage(page);
+    const filas = [];
+    for (const metodo of ['Cash', 'Check', 'Bank Transfer']) {
+      await onb.goto();
+      await onb.datosNino({ ...qaChild(), nacimiento: haceAnios(4) });
+      await onb.siguiente('Next: Family Member');
+      await onb.familiarNuevo(qaEmail());
+      await onb.metodoPago(metodo);
+      const casilla = page.getByRole('checkbox', { name: /Recurring Payment Authorization/i });
+      await casilla.first().check();
+      expect(await casilla.first().isChecked(), `${metodo}: la casilla queda marcada`).toBeTruthy();
+      await onb.siguiente('Next: Medical Info');
+      await page.getByText('Step 3 of 4').waitFor({ timeout: 30_000 });
+      await onb.siguiente('Next: Enrollment');
+      await onb.matricula({ aula: 'habilitada' });
+      const envio = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/admin/children/new'), { timeout: SLOW });
+      await onb.completar();
+      await envio;
+      await page.waitForURL(/\/admin\/children\/[0-9a-f-]{36}/, { timeout: 120_000 });
+      const id = page.url().match(/children\/([0-9a-f-]{36})/)[1];
+      limpieza.trackChild(id);
+      const leer = async () => (await rest('invoices', { headers, query: `child_id=eq.${id}&select=invoice_number,status,total_amount,family_id,recurring_payment_method_id` })).json || [];
+      await expect.poll(async () => (await leer()).length, { timeout: 120_000, message: `${metodo}: se genera la factura de onboarding` }).toBeGreaterThan(0);
+      const f = (await leer())[0];
+      expect(f.status, `${metodo}: la factura queda pendiente`).toBe('pending');
+      expect(Number(f.total_amount), `${metodo}: la factura tiene importe`).toBeGreaterThan(0);
+      const metodos = (await rest('payment_methods', { headers, query: `family_id=eq.${f.family_id}&select=type` })).json || [];
+      const pref = ((await rest('family_members', { headers, query: `family_id=eq.${f.family_id}&select=payment_method_preference` })).json || [{}])[0].payment_method_preference || 'ninguno';
+      filas.push({ metodo, casilla: 'Marcada', registro: 'Completado', factura: f.invoice_number, total: Number(f.total_amount), estado: f.status, asociada: f.recurring_payment_method_id ? 'Sí' : 'No', metodosGuardados: metodos.length, preferencia: pref });
+    }
+    recurrencia(filas);
+    informar('CP-ONB-11', filas.map((x) => `${x.metodo}: casilla marcada, factura ${x.estado} por $${x.total.toFixed(2)}, asociada a un método: ${x.asociada.toLowerCase()}`).join(' | '));
   });
 });
