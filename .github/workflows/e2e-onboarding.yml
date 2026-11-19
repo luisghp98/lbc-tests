@@ -50,5 +50,6 @@ jobs:
           echo "contraseña: largo=${#PASSWORD}"
           echo "api key: largo=${#API_KEY} empieza_por=${API_KEY:0:3}"
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - name: Instalar el navegador (se reintenta: los espejos de Ubuntu fallan a veces)
+        run: for i in 1 2 3; do npx playwright install --with-deps chromium && exit 0; echo "intento $i fallido"; sleep 20; done; exit 1
       - run: npx playwright test e2e/tests/${CARPETA:-onboarding} ${GREP_INVERT:+--grep-invert "$GREP_INVERT"} --reporter=list ${GREP:+--grep "$GREP"}
