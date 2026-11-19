@@ -242,23 +242,23 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   });
 
   // ---------- D-01. Día que no está en el tipo de enrolamiento ----------
-  // Regla 1 de la HU. Se registra un niño con un tipo de enrolamiento que no incluye el día de hoy y con la matrícula vigente
-  // (fecha de inicio ayer) y se intenta el check-in. Según desarrollo, con matrícula vigente y horario el sistema rechaza el ingreso sin cargo.
-  // Con una matrícula sin vigencia (por ejemplo creada de noche, cuando start_date sale con la fecha de mañana) el ingreso se acepta: ese no es este caso.
+  // Regla 1 de la HU. Se registra por el wizard un niño con un tipo de enrolamiento que no incluye el día de hoy y se intenta el check-in.
+  // Según desarrollo, con matrícula vigente y horario el sistema rechaza el ingreso sin cargo.
+  // Solo sirven los tipos que ofrece el wizard (el resto, como "Par Time", no aparece en el paso 4) y la cuenta de pruebas no puede modificar matrículas:
+  // con los tipos actuales solo corre sábados y domingos, y de día. Creada de noche, la matrícula queda con la fecha de mañana (no vigente) y el ingreso se acepta: ese no es este caso.
   test('D-01: el check-in en un día que no está en el tipo de enrolamiento se rechaza sin cargo', async () => {
     const tipos = (await rest('enrollment_types', { headers, query: 'select=id,name&order=name' })).json || [];
     const dias = (await rest('enrollment_type_schedules', { headers, query: 'is_attending=eq.true&deleted_at=is.null&select=enrollment_type_id,day_of_week' })).json || [];
-    const sinHoy = tipos.filter((t) => { const d = dias.filter((x) => x.enrollment_type_id === t.id).map((x) => x.day_of_week); return d.length > 0 && !d.includes(a.diaSemana); });
-    test.skip(!sinHoy.length, 'Ningún tipo de enrolamiento con horario excluye el día de hoy (lunes y martes)');
+    const DEL_WIZARD = /^(Full Time|Full Time \(DropIn\)|Full Time Matricula|Solo Mañana)$/;
+    const sinHoy = tipos.filter((t) => { const d = dias.filter((x) => x.enrollment_type_id === t.id).map((x) => x.day_of_week); return DEL_WIZARD.test(t.name) && d.length > 0 && !d.includes(a.diaSemana); });
+    test.skip(!sinHoy.length, 'Ningún tipo de enrolamiento que ofrece el wizard excluye el día de hoy (este caso corre sábados y domingos)');
     const tipo = sinHoy[0];
     const escapar = tipo.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     try {
       const { id } = await registrarNino(page, limpieza, { tipo: new RegExp(`${escapar} —`) });
-      const ayer = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-      const parche = await rest('enrollments', { method: 'PATCH', headers, query: `child_id=eq.${id}`, body: { start_date: ayer } });
       const matricula = (await rest('enrollments', { headers, query: `child_id=eq.${id}&select=status,start_date,end_date` })).json[0] || {};
-      console.log(`[D-01] tipo "${tipo.name}"; matrícula: estado ${matricula.status}, inicio ${matricula.start_date}, fin ${matricula.end_date} (PATCH HTTP ${parche.status})`);
-      test.skip(matricula.status !== 'active' || String(matricula.start_date) > a.hoy, 'La matrícula del niño no está vigente hoy');
+      console.log(`[D-01] tipo "${tipo.name}"; matrícula: estado ${matricula.status}, inicio ${matricula.start_date}, fin ${matricula.end_date}`);
+      test.skip(matricula.status !== 'active' || String(matricula.start_date) > a.hoy, 'La matrícula del niño no está vigente hoy (creada de noche, start_date sale con la fecha de mañana)');
       await a.usarNino(id);
       expect(a.hayHorario, 'hoy el tipo de enrolamiento del niño no tiene horario').toBe(false);
       await a.limpiarDia();
