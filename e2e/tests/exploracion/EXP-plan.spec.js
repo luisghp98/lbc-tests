@@ -48,10 +48,7 @@ test.describe('EXP-PLAN', () => {
   test('EXP-PLAN-02: recuperación de la sesión del wizard', async () => {
     test.fixme(!process.env.CI, 'Solo CI');
     // Sin el script que borra el borrador: se prueba el comportamiento real de la aplicación.
-    const p2 = await (await page.context().browser().newContext({ viewport: { width: 1280, height: 800 } })).newPage();
-    await p2.goto('/admin/children/new');
-    // la sesión de la primera página no se comparte: se inicia sesión de nuevo
-    await loginViaUI(p2);
+    const p2 = await page.context().newPage(); // misma sesión, pestaña nueva y sin el script que borra el borrador
     await p2.goto('/admin/children/new');
     await p2.getByRole('heading', { name: 'Add New Child' }).waitFor({ timeout: SLOW });
     const onb = new OnboardingPage(p2);
@@ -76,6 +73,31 @@ test.describe('EXP-PLAN', () => {
     console.log(`[EXP] recurrencia conservada: ${marcada}`);
     const politicas = await p2.getByRole('checkbox', { name: /Acceptance of Policies/ }).isChecked().catch(() => null);
     console.log(`[EXP] aceptación de políticas conservada (paso 1): ${politicas}`);
-    await p2.context().close();
+    await p2.close();
+  });
+
+  test('EXP-PLAN-03: conceptos de la factura con el tipo Full Time Matricula', async () => {
+    test.fixme(!process.env.CI, 'Solo CI');
+    const onb = new OnboardingPage(page);
+    await onb.goto();
+    await onb.datosNino({ ...qaChild(), nacimiento: haceAnios(4) });
+    await onb.siguiente('Next: Family Member');
+    await onb.familiarNuevo(qaEmail());
+    await onb.siguiente('Next: Medical Info');
+    await onb.siguiente('Next: Enrollment');
+    await onb.matricula({ tipo: /Full Time Matricula/, aula: 'habilitada' });
+    const envio = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/admin/children/new'), { timeout: SLOW });
+    await onb.completar();
+    await envio;
+    await page.waitForURL(/\/admin\/children\/[0-9a-f-]{36}/, { timeout: 120_000 });
+    const id = page.url().match(/children\/([0-9a-f-]{36})/)[1];
+    limpieza.trackChild(id);
+    await expect.poll(async () => ((await rest('invoices', { headers, query: `child_id=eq.${id}&select=id` })).json || []).length, { timeout: 120_000 }).toBeGreaterThan(0);
+    const fs = (await rest('invoices', { headers, query: `child_id=eq.${id}&select=id,invoice_number,subtotal,tax_amount,total_amount,invoice_category` })).json;
+    console.log(`[EXP] Matricula: ${fs.length} facturas: ${JSON.stringify(fs.map((f) => ({ n: f.invoice_number, total: f.total_amount, cat: f.invoice_category })))}`);
+    for (const f of fs) {
+      const it = (await rest('invoice_items', { headers, query: `invoice_id=eq.${f.id}&select=description,quantity,unit_price,tax_amount,line_total,is_recurring,billing_frequency` })).json || [];
+      for (const x of it) console.log(`[EXP] Matricula concepto (${f.invoice_number}): ${JSON.stringify(x)}`);
+    }
   });
 });
