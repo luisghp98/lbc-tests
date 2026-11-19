@@ -70,8 +70,9 @@ test.describe('ASIS: forzamiento y cambio de aula', { tag: '@asistencia' }, () =
   test.afterAll(async () => {
     headers = await asUser(); a.headers = headers;
     if (staffAtt) {
-      const r = await rest('staff_attendance', { method: 'PATCH', headers, query: `id=eq.${staffAtt}`, body: { exit_time: new Date().toISOString() } });
-      console.log(`[ASIS] cierre de la presencia del personal de prueba: HTTP ${r.status}`);
+      // No se puede cerrar (el aula tiene su registro de asistencia pendiente): se borra la fila de presencia de prueba, como hacía la suite anterior.
+      const r = await rest('staff_attendance', { method: 'DELETE', headers, query: `id=eq.${staffAtt}` });
+      console.log(`[ASIS] presencia del personal de prueba borrada: HTTP ${r.status}`);
     }
     await rest('schools', { method: 'PATCH', headers, query: `id=eq.${a.schoolId}`, body: { settings: original } });
     await a.restaurar();
