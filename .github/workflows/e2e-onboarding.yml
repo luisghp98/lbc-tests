@@ -28,6 +28,15 @@ jobs:
       USER: ${{ secrets.LBC_USER }}
       PASSWORD: ${{ secrets.LBC_PASSWORD }}
       API_KEY: ${{ secrets.LBC_API_KEY }}
+      PAGO_TARJETA_NUMERO: ${{ secrets.PAGO_TARJETA_NUMERO }}
+      PAGO_TARJETA_VENCIMIENTO: ${{ secrets.PAGO_TARJETA_VENCIMIENTO }}
+      PAGO_TARJETA_CVV: ${{ secrets.PAGO_TARJETA_CVV }}
+      PAGO_TARJETA_CP: ${{ secrets.PAGO_TARJETA_CP }}
+      PAGO_TARJETA_NUMERO_INVALIDO: ${{ secrets.PAGO_TARJETA_NUMERO_INVALIDO }}
+      PAGO_ACH_TITULAR: ${{ secrets.PAGO_ACH_TITULAR }}
+      PAGO_ACH_CUENTA: ${{ secrets.PAGO_ACH_CUENTA }}
+      PAGO_ACH_ROUTING: ${{ secrets.PAGO_ACH_ROUTING }}
+      PAGO_ACH_CUENTA_INVALIDA: ${{ secrets.PAGO_ACH_CUENTA_INVALIDA }}
       CARPETA: ${{ inputs.carpeta }}
       GREP: ${{ inputs.grep }}
       GREP_INVERT: ${{ inputs.grep_invert }}
