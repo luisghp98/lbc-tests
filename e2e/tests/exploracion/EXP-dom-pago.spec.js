@@ -42,6 +42,12 @@ test.describe('EXP-DOM-PAGO', () => {
       console.log(`[EXP] ${metodo} iframes en la página: ${JSON.stringify(enPagina)}`);
       const botones = await page.locator('main button').evaluateAll((bs) => [...new Set(bs.map((b) => (b.getAttribute('aria-label') || b.textContent || '').trim()).filter((t) => t && t.length < 50))]);
       console.log(`[EXP] ${metodo} botones de la página: ${JSON.stringify(botones)}`);
+      const entradas = await page.locator('main input, main [role="combobox"]').evaluateAll((els) => els.map((e) => {
+        const etiqueta = e.id ? (document.querySelector(`label[for="${e.id}"]`) || {}).textContent : null;
+        return { tag: e.tagName.toLowerCase(), tipo: e.getAttribute('type'), id: e.id || null, nombre: e.getAttribute('name'), placeholder: e.getAttribute('placeholder'),
+          aria: e.getAttribute('aria-label'), modo: e.getAttribute('inputmode'), auto: e.getAttribute('autocomplete'), etiqueta: etiqueta ? etiqueta.trim().slice(0, 30) : null, visible: !!(e.offsetWidth || e.offsetHeight) };
+      }).filter((x) => x.visible && x.tipo !== 'checkbox' && x.tipo !== 'hidden'));
+      console.log(`[EXP] ${metodo} entradas de la página: ${JSON.stringify(entradas.slice(-8))}`);
       const rotulos = await page.locator('main label').allInnerTexts();
       console.log(`[EXP] ${metodo} etiquetas visibles: ${JSON.stringify(rotulos.map((t) => t.trim()).filter((t) => t && t.length < 60))}`);
     });
