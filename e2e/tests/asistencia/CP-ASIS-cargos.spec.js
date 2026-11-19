@@ -1,12 +1,12 @@
 const { test, expect } = require('@playwright/test');
 const { loginViaUI } = require('../../utils/auth');
-const { asUser } = require('../../utils/rest');
+const { asUser, rest } = require('../../utils/rest');
 const { QaCleanup } = require('../../utils/qa');
 const { registrarNino } = require('../../utils/wizard');
 const { AsistenciaQA } = require('../../utils/asistencia');
 const { informar } = require('../../utils/informe');
 
-// LBC-825, bloques A (late check-in), B (early check-in), C (late check-out) y D-01 (día sin horario).
+// LBC-825, bloques A (late check-in), B (early check-in), C (late check-out) y D-01 (día fuera del tipo de enrolamiento).
 // Un solo niño QA: antes de cada caso se borra su asistencia del día y se aplica la política del caso.
 // Solo en CI (red estable). Al terminar se restaura la configuración del colegio y se retira al niño.
 // Las horas se simulan con p_entry_time / p_exit_time, relativas al horario contratado de hoy.
@@ -16,7 +16,7 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
   test.skip(!process.env.CI, 'Solo se ejecuta en CI');
 
   const limpieza = new QaCleanup();
-  let page; let headers; let a;
+  let page; let headers; let a; let principal;
 
   test.beforeAll(async ({ browser }) => {
     page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
@@ -26,6 +26,7 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     a = new AsistenciaQA(headers);
     await a.iniciar();
     const { id } = await registrarNino(page, limpieza);
+    principal = id;
     await a.usarNino(id);
     console.log(`[ASIS] hoy ${a.hoy} (día ${a.diaSemana}), horario de hoy: ${a.hayHorario ? `${a.inicio}-${a.fin} min` : 'sin horario'}`);
   });
@@ -240,12 +241,38 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     informar('ASIS-G-01', `gracia 5: entrada ${r.cargos.find((x) => x.source_event === 'late_check_in').fee_breakdown.minutes_late} min tarde cobra ${r.cargos.find((x) => x.source_event === 'late_check_in').fee_breakdown.exceeded_minutes} min x $2; salida ${r.cargos.find((x) => x.source_event === 'late_check_out').fee_breakdown.minutes_late} min tarde cobra ${r.cargos.find((x) => x.source_event === 'late_check_out').fee_breakdown.exceeded_minutes} min x $2`);
   });
 
-  // ---------- D-01. Día sin horario contratado (solo corre cuando hoy el niño no tiene horario, p. ej. domingo) ----------
-  test('D-01: check-in en un día sin horario contratado (informativo)', async () => {
-    test.skip(a.hayHorario, 'Hoy el niño sí tiene horario: este caso corre en un día sin horario');
-    test.info().annotations.push({ type: 'duda', description: 'Qué debe pasar con un check-in en un día no incluido en el tipo de enrolamiento (bloquear, permitir sin cargo o cobrar)' });
-    const r = await correr({ politica: FIJA, entrada: 8 * 60 + 6 });
-    console.log(`[D-01] sin horario: asistencia=${JSON.stringify(r.asistencia)} cargos=${JSON.stringify(r.cargos.map((c) => ({ evento: c.source_event, monto: c.amount, minutos: c.fee_breakdown && c.fee_breakdown.minutes_late })))}`);
+  // ---------- D-01. Día que no está en el tipo de enrolamiento ----------
+  // Regla 1 de la HU. Se registra un niño con un tipo de enrolamiento que no incluye el día de hoy y con la matrícula vigente
+  // (fecha de inicio ayer) y se intenta el check-in. Según desarrollo, con matrícula vigente y horario el sistema rechaza el ingreso sin cargo.
+  // Con una matrícula sin vigencia (por ejemplo creada de noche, cuando start_date sale con la fecha de mañana) el ingreso se acepta: ese no es este caso.
+  test('D-01: el check-in en un día que no está en el tipo de enrolamiento se rechaza sin cargo', async () => {
+    const tipos = (await rest('enrollment_types', { headers, query: 'select=id,name&order=name' })).json || [];
+    const dias = (await rest('enrollment_type_schedules', { headers, query: 'is_attending=eq.true&deleted_at=is.null&select=enrollment_type_id,day_of_week' })).json || [];
+    const sinHoy = tipos.filter((t) => { const d = dias.filter((x) => x.enrollment_type_id === t.id).map((x) => x.day_of_week); return d.length > 0 && !d.includes(a.diaSemana); });
+    test.skip(!sinHoy.length, 'Ningún tipo de enrolamiento con horario excluye el día de hoy (lunes y martes)');
+    const tipo = sinHoy[0];
+    const escapar = tipo.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    try {
+      const { id } = await registrarNino(page, limpieza, { tipo: new RegExp(`${escapar} —`) });
+      const ayer = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const parche = await rest('enrollments', { method: 'PATCH', headers, query: `child_id=eq.${id}`, body: { start_date: ayer } });
+      const matricula = (await rest('enrollments', { headers, query: `child_id=eq.${id}&select=status,start_date,end_date` })).json[0] || {};
+      console.log(`[D-01] tipo "${tipo.name}"; matrícula: estado ${matricula.status}, inicio ${matricula.start_date}, fin ${matricula.end_date} (PATCH HTTP ${parche.status})`);
+      test.skip(matricula.status !== 'active' || String(matricula.start_date) > a.hoy, 'La matrícula del niño no está vigente hoy');
+      await a.usarNino(id);
+      expect(a.hayHorario, 'hoy el tipo de enrolamiento del niño no tiene horario').toBe(false);
+      await a.limpiarDia();
+      await a.politica(FIJA);
+      const ent = await a.entrar(8 * 60 + 6);
+      const cargos = await a.cargos();
+      const rechazado = ent.status >= 300 || !(ent.asistencia && ent.asistencia.id) || (ent.respuesta && ent.respuesta.success === false);
+      const dato = `tipo ${tipo.name} (días ${dias.filter((x) => x.enrollment_type_id === tipo.id).map((x) => x.day_of_week).sort().join(',')}), hoy es el día ${a.diaSemana}; matrícula vigente desde ${matricula.start_date}`;
+      informar('ASIS-D-01', `${dato}; check-in a las 08:06: ${rechazado ? 'rechazado' : 'aceptado'}${ent.error ? ` (${String(ent.error).slice(0, 120)})` : ''}; cargos: ${cargos.length ? cargos.map((c) => `${c.source_event} $${Number(c.amount).toFixed(2)}`).join(', ') : 'ninguno'}`);
+      expect(rechazado, 'con matrícula vigente, el check-in en un día fuera del tipo de enrolamiento se rechaza').toBe(true);
+      expect(cargos, 'el check-in rechazado no genera cargos').toEqual([]);
+    } finally {
+      await a.usarNino(principal);
+    }
   });
 
   // Informativo: si el sistema rechaza horas futuras, los casos de la tarde solo pueden correr a partir de esa hora.

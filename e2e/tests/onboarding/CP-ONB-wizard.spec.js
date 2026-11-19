@@ -32,6 +32,20 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   let page; let headers; let escuelaId; let originalEscuela;
   let aulaSinPersonal; let aulaConAsignacion; let aulaDestino;
   let principal = null; // niño del CP-ONB-01, lo usan los casos 04, 05 y 06
+  let ajustesPago = null; // valores originales de payment_method_*_enabled mientras el CP-ONB-19 los cambia; afterAll los restaura si algo falla
+
+  // Devuelve a la escuela los ajustes de métodos de pago que cambia el CP-ONB-19. Reintenta porque, si falla, la escuela quedaría con un método deshabilitado.
+  async function restaurarPago() {
+    if (!ajustesPago) return;
+    for (let intento = 1; intento <= 5; intento++) {
+      try {
+        const r = await rest('school_settings', { method: 'PATCH', headers: await asUser(), query: `school_id=eq.${escuelaId}&deleted_at=is.null`, body: ajustesPago });
+        if (r.status < 300) return;
+      } catch (e) { /* se reintenta */ }
+      await new Promise((resolver) => setTimeout(resolver, 4000 * intento));
+    }
+    console.log('[CP-ONB-19] ATENCIÓN: no se pudieron restaurar los ajustes de métodos de pago; comprobar que Card y ACH sigan habilitados en la escuela');
+  }
 
   test.beforeAll(async ({ browser }) => {
     page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
@@ -54,6 +68,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   test.afterAll(async () => {
     headers = await asUser();
     await rest('schools', { method: 'PATCH', headers, query: `id=eq.${escuelaId}`, body: { settings: originalEscuela } });
+    await restaurarPago();
     await limpieza.run(headers);
     await aulas.limpiar(headers);
     await page.context().close();
@@ -375,6 +390,44 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     informar('CP-ONB-13', `métodos que ofrece la lista: ${opciones.join(', ')}; casilla visible: ${Object.entries(visibles).map(([k, v]) => `${k}=${v ? 'sí' : 'no'}`).join(', ')}`);
     expect(opciones.some((o) => /^Card/.test(o)) && opciones.some((o) => /^ACH/.test(o)), 'la lista ofrece Card y ACH').toBeTruthy();
     for (const [opcion, visible] of Object.entries(visibles)) expect(visible, `casilla con ${opcion}`).toBe(/^(Card|ACH)/.test(opcion));
+  });
+
+  // LBC-1822 y LBC-1936: el paso 2 ofrece solo los métodos recurrentes (Card y ACH) y solo los que la escuela tiene habilitados
+  // (school_settings.payment_method_*_enabled). El caso cambia esos ajustes un momento y los restaura al terminar.
+  test('CP-ONB-19: el wizard ofrece solo los métodos de pago recurrentes que la escuela tiene habilitados', async () => {
+    const filtro = `school_id=eq.${escuelaId}&deleted_at=is.null`;
+    const CLAVES = ['payment_method_card_enabled', 'payment_method_ach_enabled', 'payment_method_cash_enabled', 'payment_method_check_enabled', 'payment_method_bank_transfer_enabled'];
+    const fila = (await rest('school_settings', { headers, query: `${filtro}&select=${CLAVES.join(',')}` })).json[0];
+    expect(fila, 'la escuela tiene su fila de school_settings').toBeTruthy();
+    ajustesPago = Object.fromEntries(CLAVES.map((k) => [k, fila[k]]));
+    const listar = async () => {
+      const onb = new OnboardingPage(page);
+      await onb.goto();
+      await onb.datosNino({ ...qaChild(), nacimiento: haceAnios(4) });
+      await onb.siguiente('Next: Family Member');
+      await onb.familiarNuevo(qaEmail());
+      return onb.opcionesDeMetodoDePago();
+    };
+    // Cambia los ajustes solo mientras se lista y los restaura enseguida, para que la escuela no quede modificada si algo falla después.
+    const conAjustes = async (cambios) => {
+      const r = await rest('school_settings', { method: 'PATCH', headers, query: filtro, body: cambios });
+      expect(r.status, 'se debe poder cambiar el ajuste').toBeLessThan(300);
+      try { return await listar(); } finally { await restaurarPago(); }
+    };
+    const texto = (l) => (l.length ? l.join(', ') : 'ninguno');
+    const todos = await conAjustes({ payment_method_card_enabled: true, payment_method_ach_enabled: true, payment_method_cash_enabled: true, payment_method_check_enabled: true, payment_method_bank_transfer_enabled: true });
+    const sinAch = await conAjustes({ payment_method_card_enabled: true, payment_method_ach_enabled: false });
+    const sinCard = await conAjustes({ payment_method_card_enabled: false, payment_method_ach_enabled: true });
+    const despues = (await rest('school_settings', { headers, query: `${filtro}&select=${CLAVES.join(',')}` })).json[0];
+    const restaurado = CLAVES.every((k) => despues[k] === ajustesPago[k]);
+    if (restaurado) ajustesPago = null;
+    informar('CP-ONB-19', `con los cinco métodos habilitados en la escuela la lista ofrece: ${texto(todos)}; con ACH deshabilitado: ${texto(sinAch)}; con Card deshabilitado: ${texto(sinCard)}`);
+    expect(restaurado, 'los ajustes de métodos de pago quedan como estaban').toBeTruthy();
+    expect(todos.every((o) => /^(Card|ACH)/.test(o)) && todos.some((o) => /^Card/.test(o)) && todos.some((o) => /^ACH/.test(o)), 'habilitados todos, el wizard ofrece solo Card y ACH (LBC-1822)').toBeTruthy();
+    expect(sinAch.some((o) => /^ACH/.test(o)), 'con ACH deshabilitado no se ofrece ACH').toBeFalsy();
+    expect(sinAch.some((o) => /^Card/.test(o)), 'con ACH deshabilitado sigue ofreciéndose Card').toBeTruthy();
+    expect(sinCard.some((o) => /^Card/.test(o)), 'con Card deshabilitado no se ofrece Card').toBeFalsy();
+    expect(sinCard.some((o) => /^ACH/.test(o)), 'con Card deshabilitado sigue ofreciéndose ACH').toBeTruthy();
   });
 
   // Card y ACH piden datos de pago que escribe una persona en e2e/utils/datos-pago.js. Sin eso solo se comprueba que el wizard no avanza.

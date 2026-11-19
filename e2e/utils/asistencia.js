@@ -82,7 +82,7 @@ class AsistenciaQA {
       p_exception_reason: 'QA automatizado', p_tutor_doc_verified: true,
       p_entry_time: `${this.hoy}T${aHora(min)}${this.desfase}`, p_local_date: this.hoy, p_local_time: aHora(min),
     } });
-    return { status: r.status, asistencia: r.json && r.json.data, error: r.status >= 300 ? r.text : null };
+    return { status: r.status, asistencia: r.json && r.json.data, respuesta: r.json, error: r.status >= 300 ? r.text : null };
   }
 
   async salir(asistenciaId, min) {
