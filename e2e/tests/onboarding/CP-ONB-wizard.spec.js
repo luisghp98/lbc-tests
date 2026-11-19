@@ -419,15 +419,20 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
       await p2.getByRole('heading', { name: 'Add New Child' }).waitFor({ timeout: SLOW });
       const paso = await p2.getByText(/Step \d of 4/).first().innerText().catch(() => 'sin paso');
       await p2.waitForTimeout(2000);
+      // Paso 2 (donde se recupera el wizard): método y recurrencia.
+      const metodo = /Card/.test(await p2.getByRole('combobox', { name: /Register a payment method/ }).innerText().catch(() => ''));
+      const recurrencia = await p2.getByRole('checkbox', { name: /Recurring Payment Authorization/i }).first().isChecked().catch(() => null);
+      // Paso 1: nombre y aceptación de políticas.
+      await p2.getByRole('button', { name: 'Back' }).click();
+      await p2.getByRole('textbox', { name: 'First Name *' }).waitFor({ timeout: 30_000 });
       const estado = {
-        paso,
+        paso, metodo, recurrencia,
         nombre: (await p2.getByRole('textbox', { name: 'First Name *' }).inputValue().catch(() => null)) === nino.firstName,
         politicas: await p2.getByRole('checkbox', { name: /Acceptance of Policies/ }).isChecked().catch(() => null),
-        metodo: /Card/.test(await p2.getByRole('combobox', { name: /Register a payment method/ }).innerText().catch(() => '')),
-        recurrencia: await p2.getByRole('checkbox', { name: /Recurring Payment Authorization/i }).first().isChecked().catch(() => null),
       };
-      informar('CP-ONB-16', `tras recargar: ${estado.paso}; nombre conservado: ${estado.nombre ? 'sí' : 'no'}; políticas: ${estado.politicas === null ? 'no se ve (otro paso)' : estado.politicas ? 'conservadas' : 'no'}; método Card: ${estado.metodo ? 'conservado' : 'no'}; recurrencia: ${estado.recurrencia ? 'conservada' : 'no'}`);
+      informar('CP-ONB-16', `tras recargar el wizard vuelve al ${estado.paso.replace('Step ', 'paso ').replace(' of 4', '')}; nombre del niño conservado: ${estado.nombre ? 'sí' : 'no'}; aceptación de políticas conservada: ${estado.politicas ? 'sí' : 'no'}; método de pago Card conservado: ${estado.metodo ? 'sí' : 'no'}; autorización de recurrencia conservada: ${estado.recurrencia ? 'sí' : 'no'}`);
       expect(estado.nombre, 'el nombre del niño se conserva').toBe(true);
+      expect(estado.politicas, 'la aceptación de políticas se conserva').toBe(true);
       expect(estado.metodo, 'el método de pago se conserva').toBe(true);
       expect(estado.recurrencia, 'la autorización de recurrencia se conserva').toBe(true);
     } finally { await p2.close(); }
