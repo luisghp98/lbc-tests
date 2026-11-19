@@ -189,19 +189,20 @@ test.describe('ASIS: forzamiento y cambio de aula', { tag: '@asistencia' }, () =
 
   // ---------- D-02. La gracia se aplica sobre el horario contratado del niño, no sobre el del aula ----------
   test('D-02: la tardanza se cuenta desde el horario del niño aunque el aula abra más tarde', async () => {
-    const dias = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const horas = (await rest('classrooms', { headers, query: `id=eq.${a.aulaId}&select=operating_hours` })).json[0].operating_hours;
-    const dia = horas && horas[dias[a.diaSemana]];
-    test.skip(!dia, 'El aula del niño no tiene horario operativo hoy');
-    const abre = Number(dia.open.split(':')[0]) * 60 + Number(dia.open.split(':')[1]);
-    test.skip(abre <= a.inicio, 'Hoy el horario del niño no empieza antes de que abra el aula (se verifica miércoles a viernes)');
+    // Aula de prueba que abre una hora después del horario del niño: si la tardanza se midiera con el horario del aula, el check-in no sería tardío.
+    const abre = a.inicio + 60;
+    const h24 = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const horario = Object.fromEntries(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].map((d) => [d, { open: h24(abre), close: '18:00' }]));
+    const cambio = await rest('classrooms', { method: 'PATCH', headers, query: `id=eq.${origen.id}`, body: { operating_hours: horario } });
+    expect(cambio.status, 'se debe poder fijar el horario operativo del aula de prueba').toBeLessThan(300);
     await forzamiento(true);
     await a.limpiarDia();
     await a.politica({ attendance_late_check_in_flat_fee_enabled: true, attendance_late_check_in_fee_amount: 10 });
-    const ent = await a.entrar(a.inicio + 6);
-    expect(ent.status, ent.error).toBeLessThan(300);
+    const ent = await a.entrar(a.inicio + 6, origen.id);
+    expect(ent.status, `check-in en el aula de prueba: ${ent.error}`).toBeLessThan(300);
     const c = (await a.cargos()).filter((x) => x.source_event === 'late_check_in');
-    informar('ASIS-D-02', `el niño empieza a las ${hhmm(a.inicio).slice(0, 5)} y el aula abre a las ${dia.open}; check-in a las ${hhmm(a.inicio + 6).slice(0, 5)}: ${c.length ? `cargo de $${c[0].amount}` : 'sin cargo'}`);
+    informar('ASIS-D-02', `el niño empieza a las ${h24(a.inicio)} y el aula abre a las ${h24(abre)}; check-in a las ${h24(a.inicio + 6)}: ${c.length ? `cargo de $${c[0].amount}` : 'sin cargo'}`);
     expect(c, 'con la gracia sobre el horario del niño, 6 min tarde genera cargo').toHaveLength(1);
+    expect(Number(c[0].amount)).toBe(10);
   });
 });
