@@ -11,7 +11,7 @@ class AulasQA {
     this.asignaciones = [];
   }
 
-  async crear(headers, { etiqueta, conPersonal, desde = hoy() }) {
+  async crear(headers, { etiqueta, conPersonal, desde = hoy(), ratioId = null }) {
     const ref = await rest('classrooms', { headers, query: 'classroom_name=ilike.QA-*&deleted_at=is.null&limit=1&select=campus_id' });
     const campusId = ref.json && ref.json[0] && ref.json[0].campus_id;
     if (!campusId) throw new Error('No hay un aula QA de referencia para tomar el campus');
@@ -22,6 +22,7 @@ class AulasQA {
       body: {
         campus_id: campusId, classroom_name: nombre, classroom_code: `Q${letters(7).toUpperCase()}`,
         capacity: 5, level: 'Pre-Kindergarten', status: 'active', is_active: true, floor: 1, square_footage: 600,
+        ...(ratioId ? { assigned_ratio_id: ratioId } : {}),
       },
     });
     if (res.status !== 201) throw new Error(`crear aula ${nombre}: ${res.status} ${res.text.slice(0, 200)}`);
