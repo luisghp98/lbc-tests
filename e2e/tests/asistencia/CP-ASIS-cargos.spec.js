@@ -4,6 +4,7 @@ const { asUser } = require('../../utils/rest');
 const { QaCleanup } = require('../../utils/qa');
 const { registrarNino } = require('../../utils/wizard');
 const { AsistenciaQA } = require('../../utils/asistencia');
+const { informar } = require('../../utils/informe');
 
 // LBC-825, bloques A (late check-in), B (early check-in), C (late check-out) y D-01 (día sin horario).
 // Un solo niño QA: antes de cada caso se borra su asistencia del día y se aplica la política del caso.
@@ -50,7 +51,16 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
       const sal = await a.salir(ent.asistencia.id, salida);
       expect(sal.status, `check-out: ${sal.error}`).toBeLessThan(300);
     }
-    return { asistencia: (await a.asistencia())[0], cargos: await a.cargos() };
+    const asistencia = (await a.asistencia())[0];
+    const cargos = await a.cargos();
+    // Resultado real del caso para el informe: la hora respecto al horario contratado y los cargos generados.
+    const hm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const rel = (m, base) => `${m - base >= 0 ? '+' : ''}${m - base} min`;
+    const partes = [`check-in a las ${hm(entrada)} (${rel(entrada, a.inicio)} del inicio ${hm(a.inicio)})`];
+    if (salida !== undefined) partes.push(`check-out a las ${hm(salida)} (${rel(salida, a.fin)} del fin ${hm(a.fin)})`);
+    partes.push(cargos.length ? `cargos: ${cargos.map((c) => `${c.source_event} $${Number(c.amount).toFixed(2)}`).join(', ')}` : 'sin cargos');
+    informar(`ASIS-${test.info().title.split(':')[0]}`, partes.join('; '));
+    return { asistencia, cargos };
   }
   const deTipo = (cargos, evento) => cargos.filter((c) => c.source_event === evento);
 
@@ -113,15 +123,17 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
       ['tarifa fija $0', { attendance_late_check_in_flat_fee_enabled: true, attendance_late_check_in_fee_amount: 0 }],
       ['por minuto $0', { attendance_late_check_in_per_minute_enabled: true, attendance_late_check_in_per_minute_rate: 0 }],
     ];
+    const rechazos = [];
     for (const [nombre, cfg] of intentos) {
       await a.limpiarDia();
       const conf = await a.intentarPolitica(cfg);
-      if (conf.status >= 300) { console.log(`[A-07] ${nombre}: el sistema rechaza esa configuración (HTTP ${conf.status} ${String(conf.text).slice(0, 200)})`); continue; }
+      if (conf.status >= 300) { console.log(`[A-07] ${nombre}: el sistema rechaza esa configuración (HTTP ${conf.status} ${String(conf.text).slice(0, 200)})`); rechazos.push(nombre); continue; }
       const ent = await a.entrar(a.inicio + 30);
       expect(ent.status, ent.error).toBeLessThan(300);
       expect(await a.cargos(), `${nombre}: no debe haber cargo`).toEqual([]);
       console.log(`[A-07] ${nombre}: configuración aceptada y sin cargo`);
     }
+    informar('ASIS-A-07', `el sistema rechaza activar una tarifa en $0 (restricción de la base de datos): ${rechazos.join(' y ')}`);
   });
 
   test('A-08: el cargo detalla su cálculo (fee_breakdown)', async () => {
@@ -225,6 +237,7 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
       expect(d.exceeded_minutes, `${evento}: minutos excedidos = retraso - gracia`).toBe(tarde - d.grace_minutes);
       expect(Number(c[0].amount), `${evento}: monto = minutos excedidos x tarifa`).toBe(d.exceeded_minutes * 2);
     }
+    informar('ASIS-G-01', `gracia 5: entrada ${r.cargos.find((x) => x.source_event === 'late_check_in').fee_breakdown.minutes_late} min tarde cobra ${r.cargos.find((x) => x.source_event === 'late_check_in').fee_breakdown.exceeded_minutes} min x $2; salida ${r.cargos.find((x) => x.source_event === 'late_check_out').fee_breakdown.minutes_late} min tarde cobra ${r.cargos.find((x) => x.source_event === 'late_check_out').fee_breakdown.exceeded_minutes} min x $2`);
   });
 
   // ---------- D-01. Día sin horario contratado (solo corre cuando hoy el niño no tiene horario, p. ej. domingo) ----------
