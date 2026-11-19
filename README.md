@@ -116,3 +116,21 @@ npx playwright test e2e/tests/onboarding --grep-invert @seguridad # sin las de s
 
 **GitHub Actions.** El workflow `E2E onboarding (preprod)` es manual (*Run workflow*). Necesita tres secretos del repositorio (no variables): `LBC_USER`, `LBC_PASSWORD` y `LBC_API_KEY`. Tiene dos entradas opcionales: `grep` (filtra pruebas) y `grep_invert` (por defecto excluye `@seguridad`). Algunas pruebas solo se ejecutan en CI (`test.fixme(!process.env.CI)`) porque dependen de una conexión estable. El workflow no sube artefactos.
 
+## Pruebas de asistencia (LBC-825)
+
+Carpeta `e2e/tests/asistencia/`. Comprueban los cargos por asistencia (late check-in, early check-in y late check-out), el forzamiento de ratio activo e inactivo y el cambio de aula. Solo se ejecutan en GitHub Actions (`CI=true`).
+
+| Archivo | Qué cubre |
+|---|---|
+| `CP-ASIS-cargos.spec.js` | A (late check-in), B (early check-in), C (late check-out) y G-01 (gracia con tarifa por minuto): tarifa fija, por minuto y combinada, gracia, política desactivada y desglose del cargo. D-01 (día sin horario) solo corre cuando el niño no tiene horario ese día. |
+| `CP-ASIS-forzamiento.spec.js` | E (forzamiento activo/inactivo en el check-in), F (cambio de aula) y D-02 (la gracia se mide con el horario del niño, no el del aula). E-04 solo corre de 07:00 a 18:00 (hora del colegio), porque la presencia del personal no se puede marcar fuera de ese horario. |
+
+**Cómo se simula la hora.** `fn_manual_check_in_child` y `fn_manual_check_out_child` aceptan `p_entry_time` y `p_exit_time` (con el desfase de Nueva York); los cargos usan esa hora. Solo se acepta el día de hoy en la zona del colegio, así que las horas se calculan relativas al horario contratado de hoy (cambia por día en el tipo Full Time). La API no deja crear tipos de matrícula.
+
+**Datos y configuración.** El niño QA se registra por el wizard; entre casos se borran su asistencia y cargos. Cada caso fija la política de la escuela (`school_settings`) y el forzamiento (`schools.settings.enforce_child_ratio`); ambos se restauran al terminar. Las aulas `QA-1702-Origen` y `QA-1702-Destino` llevan el ratio *Small Infants* (máx. 4 niños por personal) y personal asignado. Si una ejecución se corta a mitad, hay que comprobar que `Enforzar ratio niño` y las políticas de asistencia sigan como estaban.
+
+```bash
+gh workflow run e2e-onboarding.yml -f carpeta=asistencia                          # toda la carpeta
+gh workflow run e2e-onboarding.yml -f carpeta=asistencia -f grep="cargos por asistencia"
+gh workflow run e2e-onboarding.yml -f carpeta=asistencia -f grep="forzamiento y cambio de aula"
+```
