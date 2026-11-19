@@ -12,6 +12,10 @@ on:
       grep:
         description: Filtro de pruebas (opcional, ej. CP-ONB-01)
         required: false
+      datos_de_pago:
+        description: Ejecutar los casos de Card y ACH con datos de pago (requiere los secretos PAGO_*; por defecto no)
+        required: false
+        default: 'no'
       grep_invert:
         description: Pruebas a excluir (por defecto las @seguridad; pon NINGUNA para incluirlas)
         required: false
@@ -28,10 +32,10 @@ jobs:
       USER: ${{ secrets.LBC_USER }}
       PASSWORD: ${{ secrets.LBC_PASSWORD }}
       API_KEY: ${{ secrets.LBC_API_KEY }}
+      PAGO_HABILITADO: ${{ inputs.datos_de_pago }}
       PAGO_TARJETA_NUMERO: ${{ secrets.PAGO_TARJETA_NUMERO }}
       PAGO_TARJETA_VENCIMIENTO: ${{ secrets.PAGO_TARJETA_VENCIMIENTO }}
       PAGO_TARJETA_CVV: ${{ secrets.PAGO_TARJETA_CVV }}
-      PAGO_TARJETA_CP: ${{ secrets.PAGO_TARJETA_CP }}
       PAGO_TARJETA_NUMERO_INVALIDO: ${{ secrets.PAGO_TARJETA_NUMERO_INVALIDO }}
       PAGO_ACH_TITULAR: ${{ secrets.PAGO_ACH_TITULAR }}
       PAGO_ACH_CUENTA: ${{ secrets.PAGO_ACH_CUENTA }}
