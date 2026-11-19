@@ -394,9 +394,10 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
         if (r.pendiente) { resumen.push(`${sufijo}: pendiente (${r.pendiente})`); continue; }
         if (datos === 'invalidos') { expect(r.avanza, `${metodo} con datos inválidos no avanza`).toBe(false); resumen.push(`${sufijo}: no avanza`); continue; }
         expect(r.avanza, `${metodo} con datos válidos avanza`).toBe(true);
-        expect(r.factura.status).toBe('pending');
-        if (recurrente) expect(r.factura.recurring_payment_method_id, 'con la recurrencia marcada la factura queda asociada al método de pago').toBeTruthy();
-        else expect(r.factura.recurring_payment_method_id, 'sin recurrencia la factura no se asocia al método').toBeNull();
+        // Soft: un fallo de la factura no debe impedir ejecutar los escenarios que siguen (el .4 de datos inválidos).
+        expect.soft(r.factura.status).toBe('pending');
+        if (recurrente) expect.soft(r.factura.recurring_payment_method_id, 'con la recurrencia marcada la factura queda asociada al método de pago').toBeTruthy();
+        else expect.soft(r.factura.recurring_payment_method_id, 'sin recurrencia la factura no se asocia al método').toBeNull();
         resumen.push(`${sufijo}: factura ${r.factura.status}, ${recurrente ? 'asociada' : 'sin asociar'} al método`);
       }
       informar(cp, resumen.join(' | '));
