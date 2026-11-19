@@ -38,7 +38,8 @@ const IMPLEMENTADO = { tarjeta: true, ach: true };
 
 const env = (n) => process.env[n] || '';
 const datosTarjeta = (invalida = false) => ({
-  numero: invalida ? env('PAGO_TARJETA_NUMERO_INVALIDO') : env('PAGO_TARJETA_NUMERO'),
+  // Con o sin espacios en la variable: el campo de la página pone los espacios solo.
+  numero: (invalida ? env('PAGO_TARJETA_NUMERO_INVALIDO') : env('PAGO_TARJETA_NUMERO')).replace(/\s+/g, ''),
   vencimiento: env('PAGO_TARJETA_VENCIMIENTO'), cvv: env('PAGO_TARJETA_CVV'),
 });
 const datosACH = (invalida = false) => ({
