@@ -40,13 +40,13 @@ class OnboardingPage {
   }
 
   // Paso 1
-  async datosNino({ firstName, lastName, gender = 'Male', nacimiento, foto }) {
+  async datosNino({ firstName, lastName, gender = 'Male', nacimiento, foto, politicas = true }) {
     await this.page.getByRole('textbox', { name: 'First Name *' }).fill(firstName);
     await this.page.getByRole('textbox', { name: 'Last Name *' }).fill(lastName);
     if (nacimiento) await this.fecha(this.page.locator('#child-info-step-birth-date'), nacimiento, 'atras');
     await this.elegir('Gender *', gender);
     if (foto) await this.page.locator('input[type="file"]').setInputFiles(foto);
-    await this.page.getByRole('checkbox', { name: /Acceptance of Policies/ }).check();
+    if (politicas) await this.page.getByRole('checkbox', { name: /Acceptance of Policies/ }).check();
     await this.page.getByRole('checkbox', { name: /All Required Documents Submitted/ }).check();
   }
 
@@ -70,8 +70,24 @@ class OnboardingPage {
     await this.page.getByRole('checkbox', { name: /All Required Documents Submitted/ }).check();
   }
 
+  /** Las opciones se llaman "Card" y "ACH (Bank Account)": un texto se busca como inicio del nombre. */
   async metodoPago(nombre) {
-    await this.elegir(/Register a payment method/, nombre);
+    await this.elegir(/Register a payment method/, typeof nombre === 'string' ? new RegExp(`^${nombre}`) : nombre);
+  }
+
+  /** Opciones que ofrece hoy la lista de métodos de pago del paso 2 (sin el texto de ayuda). */
+  async opcionesDeMetodoDePago() {
+    await this.page.getByRole('combobox', { name: /Register a payment method/ }).click();
+    const opciones = (await this.page.getByRole('option').allInnerTexts()).map((t) => t.trim()).filter((t) => t && !/^Select/.test(t));
+    await this.page.keyboard.press('Escape');
+    return opciones;
+  }
+
+  /** Paso 4, "Invoice Items": añade una fila y elige un producto (por ejemplo /Matricula Anual/). */
+  async agregarProducto(nombre) {
+    await this.page.getByRole('button', { name: 'Add Item' }).click();
+    await this.page.getByRole('combobox', { name: 'Product / Service' }).last().click();
+    await this.page.getByRole('option', { name: nombre }).first().click();
   }
 
   // Paso 3
