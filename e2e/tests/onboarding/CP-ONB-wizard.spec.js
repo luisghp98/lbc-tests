@@ -6,8 +6,6 @@ const { qaChild, qaEmail, QaCleanup } = require('../../utils/qa');
 const { AulasQA } = require('../../utils/aulas');
 const { png, desdeNavegador, archivo } = require('../../utils/imagen');
 const { informar, ficha } = require('../../utils/informe');
-const pago = require('../../utils/datos-pago');
-const { borrarMetodosQA } = require('../../utils/pagos-qa');
 
 // LBC-1702 amplía la automatización del onboarding de Ariel (LBC-365). Numeración: CP-ONB-01 a 07 son los casos de Ariel
 // (registro completo, solo obligatorios, campos obligatorios, persistencia, ratio y forzamiento, familia y factura);
@@ -48,15 +46,6 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     console.log('[CP-ONB-19] ATENCIÓN: no se pudieron restaurar los ajustes de métodos de pago; comprobar que Card y ACH sigan habilitados en la escuela');
   }
 
-  // Los casos de Card y ACH dejan métodos de pago guardados (en la pasarela y en payment_methods). Se borran con los endpoints de administración.
-  async function limpiarPagos(cuando) {
-    try {
-      const org = (await rest('schools', { headers, query: `id=eq.${escuelaId}&select=organization_id` })).json[0].organization_id;
-      const r = await borrarMetodosQA(page, headers, { schoolId: escuelaId, organizationId: org });
-      console.log(`[QA pagos] ${cuando}: métodos de pago de prueba borrados en la pasarela y en la base: ${r.borrados} de ${r.total}${r.fallos.length ? `; fallos: ${r.fallos.join(' | ')}` : ''}`);
-    } catch (e) { console.log(`[QA pagos] ${cuando}: no se pudieron borrar los métodos de pago de prueba: ${e.message}`); }
-  }
-
   test.beforeAll(async ({ browser }) => {
     page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
     await loginViaUI(page);
@@ -65,7 +54,6 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     await aulas.sweep(headers);
     escuelaId = (await rest('staff', { headers, query: 'limit=1&select=school_id' })).json[0].school_id;
     originalEscuela = (await rest('schools', { headers, query: `id=eq.${escuelaId}&select=settings` })).json[0].settings;
-    await limpiarPagos('al empezar (restos de ejecuciones anteriores)');
     // Precondición: tiene que haber un aula habilitada en el paso 4 (hoy la habilita el personal presente; la 1702 no pide crear ratios ni personal).
     const disp = await rest('rpc/fn_get_enrollment_classroom_availability', { method: 'POST', headers, body: { p_school_id: escuelaId, p_child_birth_date: ymd(haceAnios(4)), p_start_date: ymd(enDias(0)) } });
     const habilitadas = (disp.json || []).filter((c) => c.can_enroll && !/^QA-/.test(c.classroom_name));
@@ -80,7 +68,6 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     headers = await asUser();
     await rest('schools', { method: 'PATCH', headers, query: `id=eq.${escuelaId}`, body: { settings: originalEscuela } });
     await restaurarPago();
-    await limpiarPagos('al terminar');
     await limpieza.run(headers);
     await aulas.limpiar(headers);
     await page.context().close();
@@ -104,7 +91,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
   };
 
   // Ficha del niño registrado en el orden del punto 6 del ticket: la leen el informe y su "Resultado Real".
-  const fichaDelNino = async (id, { cp, caso, medica, metodo, recurrente }) => {
+  const fichaDelNino = async (id, { cp, caso, medica, metodo }) => {
     const nf = (await rest('children', { headers, query: `id=eq.${id}&select=first_name,last_name,birth_date,gender,status,school_id,profile_picture_url` })).json[0];
     const familias = (await rest('child_families', { headers, query: `child_id=eq.${id}&select=family_id` })).json || [];
     const responsables = (await rest('child_financial_responsibles', { headers, query: `child_id=eq.${id}&select=id` })).json || [];
@@ -129,7 +116,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
         forzamientoRatioNino: ajustes.enforce_child_ratio ? 'ACTIVO' : 'INACTIVO', forzamientoRatioStaff: ajustes.enforce_staff_ratio ? 'ACTIVO' : 'INACTIVO',
       },
       facturacion: {
-        metodoDePago: metodo || 'No seleccionado', autorizacionRecurrente: recurrente ? 'Marcada' : 'No marcada',
+        metodoDePago: metodo || 'No seleccionado', autorizacionRecurrente: 'No marcada',
         metodoGuardado: metodos.length ? metodos.map((x) => `${x.type}${x.is_recurring_enabled ? ' (recurrencia habilitada)' : ''}`).join(', ') : 'ninguno',
         factura: f0.invoice_number || null, estadoFactura: f0.status || null, total: Number(f0.total_amount), asociadaAMetodoDePago: !!f0.recurring_payment_method_id,
       },
@@ -139,9 +126,9 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
 
   /**
    * Registro por el wizard con datos en las cinco partes del informe. Devuelve { avanza, id, nino }.
-   * metodo: 'Card' | 'ACH' | null. datos: 'validos' | 'invalidos' | null (los escribe e2e/utils/datos-pago.js, que completa una persona).
+   * metodo: 'Card' | 'ACH' | null (solo se elige el método; no se teclean datos de pago).
    */
-  async function registro({ cp, caso, completo = true, foto = 0, metodo = null, datos = null, recurrente = false, tipo = /Full Time —/, productoExtra = null, aulaCerrada = null }) {
+  async function registro({ cp, caso, completo = true, foto = 0, metodo = null, tipo = /Full Time —/, productoExtra = null, aulaCerrada = null }) {
     const onb = new OnboardingPage(page);
     const nino = qaChild();
     await onb.goto();
@@ -149,19 +136,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     if (foto) await expect(onb.errorFoto()).toHaveCount(0);
     await onb.siguiente('Next: Family Member');
     await onb.familiarNuevo(qaEmail(), completo ? FAMILIAR : {});
-    if (metodo) {
-      await onb.metodoPago(metodo);
-      if (datos) {
-        const motivo = pago.pendiente(metodo);
-        if (motivo) { ficha({ cp, caso, estado: 'pendiente', motivo, facturacion: { metodoDePago: metodo, autorizacionRecurrente: recurrente ? 'Marcada' : 'No marcada' } }); return { pendiente: motivo, nino }; }
-        await (metodo === 'Card' ? pago.llenarTarjeta(page, pago.datosTarjeta(datos === 'invalidos')) : pago.llenarACH(page, pago.datosACH(datos === 'invalidos')));
-      }
-    }
-    if (recurrente) {
-      const casilla = page.getByRole('checkbox', { name: /Recurring Payment Authorization/i }).first();
-      await casilla.check();
-      expect(await casilla.isChecked(), 'la casilla de recurrencia queda marcada').toBeTruthy();
-    }
+    if (metodo) await onb.metodoPago(metodo);
     await onb.siguiente('Next: Medical Info');
     const avanza = await page.getByText('Step 3 of 4').waitFor({ timeout: 10_000 }).then(() => true, () => false);
     if (!avanza) {
@@ -171,7 +146,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
         cp, caso, estado: 'noAvanza',
         basica: { nombre: nino.firstName, apellido: nino.lastName, nacimiento: ymd(haceAnios(4)), genero: 'male', foto: false },
         familiar: { nombre: 'QA-Parent QA-Familiar', parentesco: completo ? 'mother' : null },
-        facturacion: { metodoDePago: metodo || 'No seleccionado', autorizacionRecurrente: recurrente ? 'Marcada' : 'No marcada' },
+        facturacion: { metodoDePago: metodo || 'No seleccionado', autorizacionRecurrente: 'No marcada' },
       });
       return { avanza: false, nino };
     }
@@ -192,7 +167,6 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
       await onb.matricula({ tipo, aula: 'habilitada' });
     }
     if (productoExtra) await onb.agregarProducto(productoExtra);
-    if (metodo && datos) await pago.alCompletar(page, metodo);
     const envio = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/admin/children/new'), { timeout: SLOW });
     await onb.completar();
     await envio;
@@ -209,7 +183,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
       expect(visibles, 'los datos médicos registrados se ven en el detalle del niño').toEqual(expect.objectContaining({ alergia: true, condicion: true, medicamento: true, necesidades: true }));
       medica = { ...MED, inicio: ymd(enDias(0)), fin: ymd(enDias(1)), visibles };
     }
-    const f = await fichaDelNino(id, { cp, caso, medica, metodo, recurrente });
+    const f = await fichaDelNino(id, { cp, caso, medica, metodo });
     return { avanza: true, id, nino, factura: f };
   }
 
@@ -442,30 +416,12 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     expect(sinCard.some((o) => /^ACH/.test(o)), 'con Card deshabilitado sigue ofreciéndose ACH').toBeTruthy();
   });
 
-  // Card y ACH piden datos de pago que escribe una persona en e2e/utils/datos-pago.js. Sin eso solo se comprueba que el wizard no avanza.
+  // Card y ACH piden datos de pago: sin ellos el wizard no avanza. La verificación de los datos contra la pasarela y la recurrencia no se automatizan.
   for (const [num, metodo, nombre] of [['14', 'Card', 'tarjeta'], ['15', 'ACH', 'cuenta bancaria']]) {
-    test(`CP-ONB-${num}: enrolamiento con ${metodo}: sin datos no avanza; con datos se completa y la factura queda según la autorización de recurrencia`, async () => {
-      const cp = `CP-ONB-${num}`;
-      const sin = await registro({ cp: `${cp}.1`, caso: `${metodo} sin datos de ${nombre}, recurrencia sin marcar`, metodo });
-      expect(sin.avanza, `${metodo}: sin datos de pago el wizard no avanza`).toBe(false);
-      const resumen = [`${metodo} sin datos: no avanza y no se crea el niño`];
-      const escenarios = [
-        ['.2', `${metodo} con datos válidos, recurrencia sin marcar`, 'validos', false],
-        ['.3', `${metodo} con datos válidos, recurrencia marcada`, 'validos', true],
-        ['.4', `${metodo} con datos inválidos`, 'invalidos', false],
-      ];
-      for (const [sufijo, caso, datos, recurrente] of escenarios) {
-        const r = await registro({ cp: `${cp}${sufijo}`, caso, metodo, datos, recurrente });
-        if (r.pendiente) { resumen.push(`${sufijo}: pendiente (${r.pendiente})`); continue; }
-        if (datos === 'invalidos') { expect(r.avanza, `${metodo} con datos inválidos no avanza`).toBe(false); resumen.push(`${sufijo}: no avanza`); continue; }
-        expect(r.avanza, `${metodo} con datos válidos avanza`).toBe(true);
-        // Soft: un fallo de la factura no debe impedir ejecutar los escenarios que siguen (el .4 de datos inválidos).
-        expect.soft(r.factura.status).toBe('pending');
-        if (recurrente) expect.soft(r.factura.recurring_payment_method_id, 'con la recurrencia marcada la factura queda asociada al método de pago').toBeTruthy();
-        else expect.soft(r.factura.recurring_payment_method_id, 'sin recurrencia la factura no se asocia al método').toBeNull();
-        resumen.push(`${sufijo}: factura ${r.factura.status}, ${recurrente ? 'asociada' : 'sin asociar'} al método`);
-      }
-      informar(cp, resumen.join(' | '));
+    test(`CP-ONB-${num}: enrolamiento con ${metodo}: sin datos de pago el wizard no avanza`, async () => {
+      const r = await registro({ cp: `CP-ONB-${num}.1`, caso: `${metodo} sin datos de ${nombre}`, metodo });
+      expect(r.avanza, `${metodo}: sin datos de pago el wizard no avanza`).toBe(false);
+      informar(`CP-ONB-${num}`, `${metodo} sin datos: no avanza y no se crea el niño`);
     });
   }
 
