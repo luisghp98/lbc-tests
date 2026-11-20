@@ -116,7 +116,10 @@ test.describe('CP-ONB-API: seguridad y validaciones del servidor', { tag: '@onbo
       const aceptadas = Object.entries(resultados).filter(([, st]) => st < 300).map(([k]) => k);
       informar('CP-ONB-API-05', `subida directa de 1 MiB aceptada; ${Object.entries(resultados).map(([k, st]) => `${k}: ${st < 300 ? 'aceptada' : 'rechazada'} (HTTP ${st})`).join('; ')}`);
       expect(aceptadas, 'el servidor debe rechazar fotos de más de 5 MiB').toEqual([]);
-    } finally { await borrar(destino, subidos); }
+    } finally {
+      // Si la limpieza falla (por ejemplo por un tiempo de espera de red) no debe tapar el error o el resultado de la prueba.
+      try { await borrar(destino, subidos); } catch (e) { console.log(`[API-05] no se pudieron borrar los archivos de prueba: ${e.message}`); }
+    }
   });
 
   test('CP-ONB-API-06: el almacenamiento rechaza archivos que no son imagen subidos directo', async () => {
@@ -139,8 +142,7 @@ test.describe('CP-ONB-API: seguridad y validaciones del servidor', { tag: '@onbo
         if (st < 300) { subidos.push(n); aceptados.push(`${ext} (${tipo})`); break; }
       }
     } finally {
-      const r = await borrar(destino, subidos);
-      borrado = r ? r.status : null;
+      try { const r = await borrar(destino, subidos); borrado = r ? r.status : null; } catch (e) { console.log(`[API-06] no se pudo borrar el archivo de prueba: ${e.message}`); }
     }
     informar('CP-ONB-API-06', `tipos probados: ${probados.join(', ')}; archivos que no son imagen aceptados por el servidor: ${aceptados.length ? aceptados.join(', ') : 'ninguno'}${subidos.length ? `; borrado del archivo de prueba: ${borrado !== null && borrado < 300 ? 'sí' : `no (HTTP ${borrado}), queda un archivo diminuto en el almacenamiento`}` : ''}`);
     expect(aceptados, 'el servidor debe rechazar archivos que no son imagen').toEqual([]);
