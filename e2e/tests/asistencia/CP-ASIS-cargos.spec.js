@@ -119,22 +119,26 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     expect(r.cargos).toEqual([]);
   });
 
-  test('A-07: una penalización de $0 no genera cargo (si el sistema deja configurarla)', async () => {
+  // Regla de desarrollo/PO: un cargo de tardanza de $0 debe generarse aunque no genere factura. Si no se genera, es un bug.
+  test('A-07: un cargo de tardanza de $0 se genera aunque no genere factura', async () => {
+    conHorario();
     const intentos = [
       ['tarifa fija $0', { attendance_late_check_in_flat_fee_enabled: true, attendance_late_check_in_fee_amount: 0 }],
       ['por minuto $0', { attendance_late_check_in_per_minute_enabled: true, attendance_late_check_in_per_minute_rate: 0 }],
     ];
-    const rechazos = [];
+    const rechazadas = []; const sinCargo = []; const conCargo = [];
     for (const [nombre, cfg] of intentos) {
       await a.limpiarDia();
       const conf = await a.intentarPolitica(cfg);
-      if (conf.status >= 300) { console.log(`[A-07] ${nombre}: el sistema rechaza esa configuración (HTTP ${conf.status} ${String(conf.text).slice(0, 200)})`); rechazos.push(nombre); continue; }
+      if (conf.status >= 300) { console.log(`[A-07] ${nombre}: el sistema rechaza esa configuración (HTTP ${conf.status} ${String(conf.text).slice(0, 200)})`); rechazadas.push(nombre); continue; }
       const ent = await a.entrar(a.inicio + 30);
       expect(ent.status, ent.error).toBeLessThan(300);
-      expect(await a.cargos(), `${nombre}: no debe haber cargo`).toEqual([]);
-      console.log(`[A-07] ${nombre}: configuración aceptada y sin cargo`);
+      const cargos = (await a.cargos()).filter((c) => c.source_event === 'late_check_in');
+      if (cargos.length && cargos.every((c) => Number(c.amount) === 0)) conCargo.push(nombre); else sinCargo.push(nombre);
     }
-    informar('ASIS-A-07', `el sistema rechaza activar una tarifa en $0 (restricción de la base de datos): ${rechazos.join(' y ')}`);
+    informar('ASIS-A-07', `${rechazadas.length ? `el sistema rechaza activar una tarifa en $0 (restricción de la base de datos): ${rechazadas.join(' y ')}, por lo que no se puede generar un cargo de $0` : ''}${sinCargo.length ? `; con la tarifa en $0 aceptada, la tardanza no generó cargo: ${sinCargo.join(' y ')}` : ''}${conCargo.length ? `; cargo de $0 generado: ${conCargo.join(' y ')}` : ''}`.replace(/^; /, ''));
+    expect(rechazadas, 'el sistema debe permitir la tarifa en $0 para generar el cargo de $0').toEqual([]);
+    expect(sinCargo, 'una tardanza con tarifa $0 debe generar un cargo de $0').toEqual([]);
   });
 
   test('A-08: el cargo detalla su cálculo (fee_breakdown)', async () => {
