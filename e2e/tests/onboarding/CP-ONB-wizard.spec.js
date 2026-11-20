@@ -7,6 +7,7 @@ const { AulasQA } = require('../../utils/aulas');
 const { png, desdeNavegador, archivo } = require('../../utils/imagen');
 const { informar, ficha } = require('../../utils/informe');
 const pago = require('../../utils/datos-pago');
+const { borrarMetodosQA } = require('../../utils/pagos-qa');
 
 // LBC-1702 amplía la automatización del onboarding de Ariel (LBC-365). Numeración: CP-ONB-01 a 07 son los casos de Ariel
 // (registro completo, solo obligatorios, campos obligatorios, persistencia, ratio y forzamiento, familia y factura);
@@ -47,6 +48,15 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     console.log('[CP-ONB-19] ATENCIÓN: no se pudieron restaurar los ajustes de métodos de pago; comprobar que Card y ACH sigan habilitados en la escuela');
   }
 
+  // Los casos de Card y ACH dejan métodos de pago guardados (en la pasarela y en payment_methods). Se borran con los endpoints de administración.
+  async function limpiarPagos(cuando) {
+    try {
+      const org = (await rest('schools', { headers, query: `id=eq.${escuelaId}&select=organization_id` })).json[0].organization_id;
+      const r = await borrarMetodosQA(page, headers, { schoolId: escuelaId, organizationId: org });
+      console.log(`[QA pagos] ${cuando}: métodos de pago de prueba borrados en la pasarela y en la base: ${r.borrados} de ${r.total}${r.fallos.length ? `; fallos: ${r.fallos.join(' | ')}` : ''}`);
+    } catch (e) { console.log(`[QA pagos] ${cuando}: no se pudieron borrar los métodos de pago de prueba: ${e.message}`); }
+  }
+
   test.beforeAll(async ({ browser }) => {
     page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
     await loginViaUI(page);
@@ -55,6 +65,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     await aulas.sweep(headers);
     escuelaId = (await rest('staff', { headers, query: 'limit=1&select=school_id' })).json[0].school_id;
     originalEscuela = (await rest('schools', { headers, query: `id=eq.${escuelaId}&select=settings` })).json[0].settings;
+    await limpiarPagos('al empezar (restos de ejecuciones anteriores)');
     // Precondición: tiene que haber un aula habilitada en el paso 4 (hoy la habilita el personal presente; la 1702 no pide crear ratios ni personal).
     const disp = await rest('rpc/fn_get_enrollment_classroom_availability', { method: 'POST', headers, body: { p_school_id: escuelaId, p_child_birth_date: ymd(haceAnios(4)), p_start_date: ymd(enDias(0)) } });
     const habilitadas = (disp.json || []).filter((c) => c.can_enroll && !/^QA-/.test(c.classroom_name));
@@ -69,6 +80,7 @@ test.describe('CP-ONB: Onboarding del niño (wizard)', { tag: '@onboarding' }, (
     headers = await asUser();
     await rest('schools', { method: 'PATCH', headers, query: `id=eq.${escuelaId}`, body: { settings: originalEscuela } });
     await restaurarPago();
+    await limpiarPagos('al terminar');
     await limpieza.run(headers);
     await aulas.limpiar(headers);
     await page.context().close();
