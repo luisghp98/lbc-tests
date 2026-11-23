@@ -112,11 +112,15 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     expect(Number(c[0].amount), 'LBC-1310: $10 + 10 min x $2').toBe(30);
   });
 
-  test('A-06: con la política desactivada no hay cargo aunque llegue tarde', async () => {
+  // Confirmado por desarrollo (LBC-1970): el cargo solo mira el periodo de gracia, no si las opciones de tarifa están activadas;
+  // con la política desactivada una tardanza pasada la gracia genera un cargo de $0.
+  test('A-06: con la política desactivada el cargo es de $0 (solo decide el periodo de gracia)', async () => {
     conHorario();
     const r = await correr({ politica: {}, entrada: a.inicio + 30 });
     expect(r.asistencia.is_late).toBe(true);
-    expect(r.cargos).toEqual([]);
+    const c = deTipo(r.cargos, 'late_check_in');
+    expect(c, 'una tardanza pasada la gracia genera un cargo aunque la política esté desactivada').toHaveLength(1);
+    expect(Number(c[0].amount)).toBe(0);
   });
 
   // Regla de desarrollo/PO: un cargo de tardanza de $0 debe generarse aunque no genere factura. Si no se genera, es un bug.
@@ -179,10 +183,12 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
     expect(Number(c[0].amount)).toBe(10);
   });
 
-  test('B-04: con la política desactivada no hay cargo aunque llegue temprano', async () => {
+  test('B-04: con la política desactivada el cargo es de $0 (solo decide el periodo de gracia)', async () => {
     conHorario();
     const r = await correr({ politica: {}, entrada: a.inicio - 30 });
-    expect(tempranos(r.cargos)).toEqual([]);
+    const c = tempranos(r.cargos);
+    expect(c, 'una llegada anticipada pasada la gracia genera un cargo aunque la política esté desactivada').toHaveLength(1);
+    expect(Number(c[0].amount)).toBe(0);
   });
 
   // ---------- C. Late check-out ----------
