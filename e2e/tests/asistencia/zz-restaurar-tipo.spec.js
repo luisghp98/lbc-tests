@@ -40,7 +40,12 @@ test.describe('RESTAURAR: horario de Solo Mañana', () => {
     await page.waitForTimeout(20_000);
     console.log('[RESTAURAR] llamadas que no son GET tras guardar: ' + JSON.stringify(llamadas));
     console.log('[RESTAURAR] campos inválidos tras guardar: ' + JSON.stringify(await page.locator(':invalid').evaluateAll((xs) => xs.map((x) => (x.name || x.id || x.type || x.tagName) + ':' + (x.validationMessage || '').slice(0, 60)))));
-    console.log('[RESTAURAR] texto del formulario: ' + (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 700));
+    const texto = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ');
+    const i = texto.indexOf('ATTENDANCE DAYS');
+    console.log('[RESTAURAR] sección de horario tras guardar: ' + texto.slice(i, i + 700));
+    console.log('[RESTAURAR] campos aria-invalid: ' + JSON.stringify(await page.locator('[aria-invalid=true]').evaluateAll((xs) => xs.map((x) => (x.name || x.id || x.type || x.tagName)))));
+    console.log('[RESTAURAR] mensajes de error visibles: ' + JSON.stringify((await page.getByText(/required|invalid|must|please|error|select a|obligatorio/i).allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').slice(0, 120)).slice(0, 10)));
+    console.log('[RESTAURAR] HTML de la fila del lunes: ' + (await fila.evaluate((el) => el.outerHTML.replace(/\s+/g, ' ').slice(0, 900)).catch(() => 'sin fila')));
     console.log('[RESTAURAR] url: ' + new URL(page.url()).pathname.replace(/[0-9a-f-]{36}/, '<id>'));
     console.log('[RESTAURAR] después: ' + await estado());
   });
