@@ -37,9 +37,12 @@ test.describe('RESTAURAR: horario de Solo Mañana', () => {
     console.log('[RESTAURAR] campos inválidos: ' + JSON.stringify(await page.locator(':invalid').evaluateAll((xs) => xs.map((x) => (x.name || x.id || x.type || x.tagName) + ':' + (x.validationMessage || '').slice(0, 60)))));
     llamadas.length = 0;
     await guardar.click();
-    await page.waitForTimeout(20_000);
+    const aplicar = page.getByRole('button', { name: /apply change/i });
+    const hayDialogo = await aplicar.waitFor({ timeout: 15_000 }).then(() => true, () => false);
+    console.log('[RESTAURAR] diálogo de confirmación: ' + hayDialogo);
+    if (hayDialogo) await aplicar.click();
+    await page.waitForTimeout(15_000);
     console.log('[RESTAURAR] llamadas que no son GET tras guardar: ' + JSON.stringify(llamadas));
-    console.log('[RESTAURAR] campos inválidos tras guardar: ' + JSON.stringify(await page.locator(':invalid').evaluateAll((xs) => xs.map((x) => (x.name || x.id || x.type || x.tagName) + ':' + (x.validationMessage || '').slice(0, 60)))));
     const texto = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ');
     const i = texto.indexOf('ATTENDANCE DAYS');
     console.log('[RESTAURAR] sección de horario tras guardar: ' + texto.slice(i, i + 700));
