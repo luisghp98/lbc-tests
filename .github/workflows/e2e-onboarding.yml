@@ -28,6 +28,8 @@ jobs:
       USER: ${{ secrets.LBC_USER }}
       PASSWORD: ${{ secrets.LBC_PASSWORD }}
       API_KEY: ${{ secrets.LBC_API_KEY }}
+      ADMIN_USER: ${{ secrets.LBC_ADMIN_USER }}
+      ADMIN_PASSWORD: ${{ secrets.LBC_ADMIN_PASSWORD }}
       CARPETA: ${{ inputs.carpeta }}
       GREP: ${{ inputs.grep }}
       GREP_INVERT: ${{ inputs.grep_invert }}
