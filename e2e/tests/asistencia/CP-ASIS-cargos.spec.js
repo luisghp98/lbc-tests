@@ -247,39 +247,53 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
 
   // ---------- D-01. Día que no está en el tipo de enrolamiento ----------
   // Regla 1 de la HU: un check-in en un día que no está en el tipo de enrolamiento del niño se rechaza sin cargo (confirmado por desarrollo).
-  // Para poder probarlo cualquier día se edita por la interfaz web el tipo "Solo Mañana" (sin matrículas activas): se le quita el día de hoy,
+  // Para poder probarlo cualquier día se edita por la interfaz web el tipo "Solo Mañana" (sin matrículas de personas reales): se le quita el día de hoy,
   // se registra un niño con ese tipo (matrícula vigente desde hoy), se intenta el check-in y se restaura el horario. La API no deja editarlo
-  // (permission denied for table enrollment_type_schedules), solo la aplicación web.
+  // (permission denied for table enrollment_type_schedules), solo la aplicación web. Si el tipo ya tiene niños asociados (los de prueba de una
+  // ejecución anterior), la pantalla pide confirmar el cambio con "Apply change". Al volver a marcar un día sus horas quedan vacías: se rellenan.
   test('D-01: el check-in en un día que no está en el tipo de enrolamiento se rechaza sin cargo', async () => {
     const NOMBRE = 'Solo Mañana';
     const DIAS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const hoyNombre = DIAS[a.diaSemana];
     const tipo = ((await rest('enrollment_types', { headers, query: `name=eq.${NOMBRE}&select=id` })).json || [])[0];
     test.skip(!tipo, `No existe el tipo de enrolamiento "${NOMBRE}"`);
-    const activas = (await rest('enrollments', { headers, query: `enrollment_type_id=eq.${tipo.id}&status=eq.active&select=id` })).json || [];
-    test.skip(activas.length > 0, `"${NOMBRE}" tiene ${activas.length} matrículas activas: no se edita su horario`);
+    const matriculas = (await rest('enrollments', { headers, query: `enrollment_type_id=eq.${tipo.id}&status=eq.active&select=id,child:children(last_name)` })).json || [];
+    const reales = matriculas.filter((m) => !(m.child && /^QA-/.test(m.child.last_name || '')));
+    test.skip(reales.length > 0, `"${NOMBRE}" tiene ${reales.length} matrículas activas de niños que no son de prueba: no se edita su horario`);
     const horario = async () => ((await rest('enrollment_type_schedules', { headers, query: `enrollment_type_id=eq.${tipo.id}&deleted_at=is.null&select=day_of_week,is_attending,start_time,end_time&order=day_of_week` })).json || [])
       .map((f) => `${f.day_of_week}:${f.is_attending ? 1 : 0}:${String(f.start_time).slice(0, 5)}-${String(f.end_time).slice(0, 5)}`);
     const atiende = async () => ((await rest('enrollment_type_schedules', { headers, query: `enrollment_type_id=eq.${tipo.id}&day_of_week=eq.${a.diaSemana}&is_attending=eq.true&deleted_at=is.null&select=id` })).json || []).length > 0;
-    // Marca o desmarca el día de hoy en la pantalla de edición del tipo y guarda; espera a que la base de datos lo refleje.
-    const fijarDia = async (marcado) => {
+    // Marca o desmarca el día de hoy en la pantalla de edición del tipo, guarda (confirmando el cambio) y espera a que la base de datos lo refleje.
+    const fijarDia = async (marcado, horas = ['08:00', '12:00']) => {
       await page.goto(`/admin/enrollment-types/${tipo.id}/edit`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: /save changes/i }).waitFor({ timeout: 180_000 });
       await page.waitForTimeout(2000);
       const casilla = page.getByRole('checkbox', { name: hoyNombre });
       if ((await casilla.isChecked()) !== marcado) {
         await casilla.setChecked(marcado);
-        const resp = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/admin/enrollment-types'), { timeout: 90_000 }).catch(() => null);
+        if (marcado) {
+          const campos = casilla.locator('xpath=ancestor::*[.//input[@type="time"]][1]').locator('input[type=time]');
+          await campos.nth(0).fill(horas[0]);
+          await campos.nth(1).fill(horas[1]);
+        }
         await page.getByRole('button', { name: /save changes/i }).click();
-        const r = await resp;
-        console.log(`[D-01] guardar el tipo (${hoyNombre} ${marcado ? 'marcado' : 'desmarcado'}): ${r ? `HTTP ${r.status()}` : 'sin respuesta'}`);
+        const aplicar = page.getByRole('button', { name: /apply change/i });
+        if (await aplicar.waitFor({ timeout: 10_000 }).then(() => true, () => false)) await aplicar.click();
       }
       for (let i = 0; i < 30 && (await atiende()) !== marcado; i++) await page.waitForTimeout(2000);
+      if ((await atiende()) !== marcado) throw new Error(`el horario de "${NOMBRE}" no quedó con ${hoyNombre} ${marcado ? 'marcado' : 'desmarcado'}`);
     };
+    // Resto de una ejecución anterior interrumpida: el tipo es de lunes a sábado y hoy no atiende.
+    if (a.diaSemana >= 1 && a.diaSemana <= 6 && !(await atiende())) {
+      console.log(`[D-01] "${NOMBRE}" estaba sin ${hoyNombre} (resto de una ejecución anterior): se restaura antes de empezar`);
+      await fijarDia(true);
+    }
     const antes = await horario();
     console.log(`[D-01] horario de "${NOMBRE}" antes: ${JSON.stringify(antes)}`);
     const editar = await atiende();
+    const original = (antes.find((x) => x.startsWith(`${a.diaSemana}:1:`)) || '').match(/(\d\d:\d\d)-(\d\d:\d\d)$/);
     let nuevoId = null;
+    let error = null;
     try {
       if (editar) await fijarDia(false);
       expect(await atiende(), `"${NOMBRE}" ya no atiende el día de hoy`).toBe(false);
@@ -298,11 +312,17 @@ test.describe('ASIS: cargos por asistencia (late/early check-in, late check-out)
       informar('ASIS-D-01', `tipo "${NOMBRE}" sin ${hoyNombre} (horario editado por la interfaz y restaurado al terminar); matrícula vigente desde ${matricula.start_date}; check-in a las 08:06: ${rechazado ? 'rechazado' : 'aceptado'}${ent.error ? ` (${String(ent.error).slice(0, 120)})` : ''}; cargos: ${cargos.length ? cargos.map((c) => `${c.source_event} $${Number(c.amount).toFixed(2)}`).join(', ') : 'ninguno'}`);
       expect(rechazado, 'con matrícula vigente, el check-in en un día fuera del tipo de enrolamiento se rechaza').toBe(true);
       expect(cargos, 'el check-in rechazado no genera cargos').toEqual([]);
+    } catch (e) {
+      error = e;
+      throw e;
     } finally {
-      try { if (editar) await fijarDia(true); } catch (e) { console.log(`[D-01] ATENCIÓN: no se pudo restaurar el horario de "${NOMBRE}": ${e.message}`); }
+      let restaurado = true;
+      try { if (editar) await fijarDia(true, original ? [original[1], original[2]] : undefined); } catch (e) { restaurado = false; console.log(`[D-01] ATENCIÓN: no se pudo restaurar el horario de "${NOMBRE}": ${e.message}`); }
       const despues = await horario();
-      console.log(`[D-01] horario de "${NOMBRE}" después: ${JSON.stringify(despues)} | igual al original: ${JSON.stringify(antes) === JSON.stringify(despues)}`);
+      const igual = JSON.stringify(antes) === JSON.stringify(despues);
+      console.log(`[D-01] horario de "${NOMBRE}" después: ${JSON.stringify(despues)} | igual al original: ${igual}`);
       if (nuevoId) await a.usarNino(principal);
+      if (!igual && !error) throw new Error(`El horario de "${NOMBRE}" no quedó como estaba (restaurado: ${restaurado})`);
     }
   });
 
