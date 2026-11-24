@@ -134,3 +134,26 @@ gh workflow run e2e-onboarding.yml -f carpeta=asistencia                        
 gh workflow run e2e-onboarding.yml -f carpeta=asistencia -f grep="cargos por asistencia"
 gh workflow run e2e-onboarding.yml -f carpeta=asistencia -f grep="forzamiento y cambio de aula"
 ```
+
+## Pruebas de asistencia del staff (LBC-1896)
+
+Carpeta `e2e/tests/asistencia-staff/`. Comprueban el clock-in y el clock-out con el horario del staff, los breaks, el forzamiento del ratio (activo e inactivo), el cambio de aula del staff y la regla del día configurado. Son solo de API (no abren el navegador) y se pueden ejecutar en local o en GitHub Actions.
+
+| Archivo | Qué cubre |
+|---|---|
+| `CP-STAFF-asistencia.spec.js` | A (clock-in/out y horario del staff, con y sin horario propio), B (breaks), C (forzamiento del ratio en clock-in, clock-out y break), D (cambio de aula: no crea otro clock-in, conserva la hora y las asignaciones, deja traza y cuenta al staff en el aula nueva), E (día configurado) y los exploratorios X-01 a X-03. |
+
+**Ejecutar**
+
+```bash
+npx playwright test e2e/tests/asistencia-staff                                        # local
+gh workflow run e2e-onboarding.yml -f carpeta=asistencia-staff                        # GitHub Actions
+```
+
+**Docente de prueba.** Todo se hace con un único docente (`STAFF_QA_ID`, por defecto `3fd488ed-…`, tipo *teacher* y sin horario de trabajo propio). Al empezar la suite comprueba que no tiene horario propio ni una asistencia real de hoy; si la tiene, se detiene sin tocar nada. Le guarda un horario temporal de hoy con `fn_save_staff_work_schedule` y al terminar lo deja **sin horario** (borrado lógico de sus filas y descansos), como estaba.
+
+**Horario y día.** La ventana de trabajo se calcula con las horas del colegio de hoy (el horario del staff debe estar dentro de ellas): de una hora después de la apertura a una hora antes del cierre. Si la escuela está cerrada (domingo), la suite se omite. La hora se simula con `p_local_time` y `p_entry_time`; el registro real solo acepta el día de hoy en la zona del colegio.
+
+**Aulas y niños.** Las aulas `QA-1702-St…` (prefijo compartido con las otras suites) llevan el ratio *Small Infants* (máx. 4 niños por personal) y el docente asignado; los niños `QA-Lbc-…` se retiran al final. El forzamiento del staff es `schools.settings.enforce_staff_ratio` y el de niños `enforce_child_ratio`; se restauran al terminar. Si una corrida se corta, hay que comprobar que ambos sigan activos y que el docente no tenga horario propio.
+
+**Límite conocido.** Con la sesión de administrador el clock-out no se completa: el aula exige cerrar su registro de asistencia desde la app del staff y la base responde `classroom_attendance_register_pending`. Por eso A-05, A-06 y D-05 comprueban la validación del horario, que la asistencia sigue abierta y el aula a la que apunta el rechazo. La bitácora de eventos (`staff_event_logs`) no es legible con este usuario.

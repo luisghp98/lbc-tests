@@ -11,7 +11,7 @@ class AulasQA {
     this.asignaciones = [];
   }
 
-  async crear(headers, { etiqueta, conPersonal, desde = hoy(), ratioId = null }) {
+  async crear(headers, { etiqueta, conPersonal, desde = hoy(), ratioId = null, staffId: personal = null }) {
     const ref = await rest('classrooms', { headers, query: 'classroom_name=ilike.QA-*&deleted_at=is.null&limit=1&select=campus_id' });
     const campusId = ref.json && ref.json[0] && ref.json[0].campus_id;
     if (!campusId) throw new Error('No hay un aula QA de referencia para tomar el campus');
@@ -30,8 +30,8 @@ class AulasQA {
     this.aulas.push(aula);
 
     if (conPersonal) {
-      const staff = await rest('staff', { headers, query: 'employment_status=eq.active&deleted_at=is.null&limit=1&select=id' });
-      const staffId = staff.json && staff.json[0] && staff.json[0].id;
+      const staff = personal ? null : await rest('staff', { headers, query: 'employment_status=eq.active&deleted_at=is.null&limit=1&select=id' });
+      const staffId = personal || (staff.json && staff.json[0] && staff.json[0].id);
       if (!staffId) throw new Error('No hay personal activo para asignar');
       const asg = await rest('classroom_staff_assignments', {
         method: 'POST', headers,
