@@ -215,9 +215,12 @@ test.describe('STAFF: asistencia del staff', { tag: '@asistencia' }, () => {
       const a = await s.iniciarBreak(att, vacia.id, 'lunch', ini + 90);
       const b = await s.iniciarBreak(att, vacia.id, 'lunch', ini + 91);
       const activos = (await s.breaksDe(att)).filter((x) => !x.break_end).length;
-      informar('STAFF-B-04', `primer break activo: ${a.ok ? 'aceptado' : 'rechazado'}; segundo break activo: ${b.ok ? 'ACEPTADO por la base' : 'rechazado'}; breaks activos=${activos}`);
+      // La pantalla comprueba si ya hay un break activo con maybeSingle(): con 2 filas activas la API responde 406 y esa comprobación deja de detectar nada.
+      const guardia = await rest('staff_breaks', { headers: { ...headers, Accept: 'application/vnd.pgrst.object+json' }, query: `staff_id=eq.${s.staffId}&staff_attendance_id=eq.${att}&break_end=is.null&select=id` });
+      const duraciones = [];
+      for (const x of [a.id, b.id]) if (x) { const r = await s.terminarBreak(x, ini + 100); duraciones.push(r.ok ? r.json[0].duration_minutes : null); }
+      informar('STAFF-B-04', `primer break activo: ${a.ok ? 'aceptado' : 'rechazado'}; segundo break activo: ${b.ok ? 'ACEPTADO por la base' : 'rechazado'}; breaks activos=${activos}; consulta de la pantalla con ${activos} activos: HTTP ${guardia.status}; duraciones=${JSON.stringify(duraciones)} (suma ${duraciones.reduce((t, d) => t + (d || 0), 0)} min; tiempo real fuera del aula 10 min)`);
       expect(a.ok, a.error).toBe(true);
-      for (const x of [a.id, b.id]) if (x) await s.terminarBreak(x, ini + 100);
     });
 
     test('B-05: el almuerzo programado no restringe los eventos dentro del horario de trabajo', async () => {
@@ -361,12 +364,28 @@ test.describe('STAFF: asistencia del staff', { tag: '@asistencia' }, () => {
       expect(ids).toContain(destino.id);
     });
 
-    test('D-09b: las opciones de cambio no incluyen un aula inactiva', async () => {
-      test.fail(true, 'Hallazgo: un aula con is_active=false y status=inactive (sin borrar) aparece en las opciones de cambio de aula del staff; la LBC-975 (CA 2) pide solo aulas activas.');
+    test('D-09b: un aula inactiva no se puede elegir en las opciones de cambio (se lista bloqueada: can_move=false, CLASSROOM_INACTIVE)', async () => {
       const op = await s.opcionesCambio(attOrigen);
-      const ids = (op.options || []).map((o) => o.id);
-      informar('STAFF-D-09b', `el aula inactiva ${ids.includes(inactiva.id) ? 'SÍ aparece' : 'no aparece'} en las opciones`);
-      expect(ids).not.toContain(inactiva.id);
+      const o = (op.options || []).find((x) => x.id === inactiva.id);
+      informar('STAFF-D-09b', o ? `el aula inactiva aparece en la lista bloqueada: can_move=${o.can_move}; motivos=${JSON.stringify(o.blocked_reasons)}` : 'el aula inactiva no aparece en las opciones');
+      if (o) {
+        expect(o.can_move, 'el aula inactiva no debe poder elegirse').toBe(false);
+        expect(o.blocked_reasons).toContain('CLASSROOM_INACTIVE');
+      }
+    });
+
+    test('D-09c: elegir un aula inactiva se rechaza (classroom_inactive), ni confirmando, y no cambia nada', async () => {
+      const sin = await s.cambiarAula(attOrigen, inactiva.id, { confirmar: false });
+      const conf = await s.cambiarAula(attOrigen, inactiva.id, { confirmar: true });
+      const fila = await s.filaAsistencia(attOrigen);
+      const trans = (await s.transiciones()).filter((t) => t.staff_attendance_id === attOrigen);
+      informar('STAFF-D-09c', `sin confirmar=${sin.json.error}; confirmando=${conf.json.error}; aula de la asistencia=${fila.classroom_id === origen.id ? 'origen' : 'OTRA'}; transiciones=${trans.length}`);
+      expect(sin.json.success).toBe(false);
+      expect(sin.json.error).toBe('classroom_inactive');
+      expect(conf.json.success).toBe(false);
+      expect(conf.json.error).toBe('classroom_inactive');
+      expect(fila.classroom_id, 'la asistencia no cambia de aula').toBe(origen.id);
+      expect(trans, 'no se registra transición').toHaveLength(0);
     });
 
     test('D-06: con el forzamiento activo y el origen sin cobertura el cambio se bloquea, ni confirmando', async () => {
